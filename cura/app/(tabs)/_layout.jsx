@@ -1,26 +1,44 @@
-import { View, Text } from "react-native";
-import React from "react";
 import { Tabs } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 
 const TabLayout = () => {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="home"
-        options={{ headerShown: false, title: "Home" }}
+        name="index_hm"
+        options={{
+          title: "Home",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
       />
       <Tabs.Screen
         name="remind"
-        options={{ headerShown: false, title: "Reminders" }}
+        options={{
+          title: "Reminders",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="alarm" size={size} color={color} />
+          ),
+        }}
       />
       <Tabs.Screen
         name="diet"
-        options={{ headerShown: false, title: "Diet Plan" }}
+        options={{
+          title: "Diet Plan",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="restaurant" size={size} color={color} />
+          ),
+        }}
       />
       <Tabs.Screen
         name="progress"
-        options={{ headerShown: false, title: "Progress" }}
+        options={{
+          title: "Progress",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="stats-chart" size={size} color={color} />
+          ),
+        }}
       />
     </Tabs>
   );
