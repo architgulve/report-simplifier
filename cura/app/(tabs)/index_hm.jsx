@@ -1,10 +1,10 @@
-import { View, Text } from "react-native";
+import { View, Text, StatusBar } from "react-native";
 import React from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { ScrollView } from "react-native-gesture-handler";
+import { ScrollView } from "react-native";
 
 const Home = () => {
   const hours = new Date().getHours();
@@ -17,45 +17,41 @@ const Home = () => {
   }
 
   return (
-    <SafeAreaView>
-      <ScrollView
-        contentContainerStyle={{
-          backgroundColor: "#DFF6FB",
-          paddingBottom: 20,
+    <SafeAreaView edges={["top"]} className="h-full bg-[#ffffff]">
+      <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
+      <View
+        style={{
+          alignItems: "left",
+          flexDirection: "row",
+          padding: 20,
+          backgroundColor: "#ffffff",
         }}
       >
+        {/* // Header Section */}
+        <Image source={require("../../assets/images/homepageicon.png")} />
+        <Text
+          style={{
+            fontSize: 40,
+            fontFamily: "Lobster",
+          }}
+        >
+          Cura
+        </Text>
+        <View
+          style={{
+            alignItems: "right",
+            marginLeft: 180,
+            justifyContent: "center",
+          }}
+        >
+          <Image
+            source={require("../../assets/images/settings.png")}
+            style={{ width: 30, height: 30 }}
+          />
+        </View>
+      </View>
+      <ScrollView className="h-full bg-[#DFF6FB]">
         <View style={{ backgroundColor: "#DFF6FB", height: "100%" }}>
-          <View
-            style={{
-              alignItems: "left",
-              flexDirection: "row",
-              padding: 10,
-              backgroundColor: "#ffffff",
-            }}
-          >
-            {/* // Header Section */}
-            <Image source={require("../../assets/images/homepageicon.png")} />
-            <Text
-              style={{
-                fontSize: 40,
-                fontFamily: "Lobster",
-              }}
-            >
-              Cura
-            </Text>
-            <View
-              style={{
-                alignItems: "right",
-                marginLeft: 180,
-                justifyContent: "center",
-              }}
-            >
-              <Image
-                source={require("../../assets/images/settings.png")}
-                style={{ width: 30, height: 30 }}
-              />
-            </View>
-          </View>
           <View
             style={{
               margin: 25,

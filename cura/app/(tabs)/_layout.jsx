@@ -5,7 +5,7 @@ const TabLayout = () => {
   return (
     <Tabs screenOptions={{ headerShown: false }}>
       <Tabs.Screen
-        name="home"
+        name="index_hm"
         options={{ headerShown: false, title: "Home" }}
       />
       <Tabs.Screen
