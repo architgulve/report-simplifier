@@ -59,14 +59,13 @@ const Home = () => {
               alignItems: "left",
               flexDirection: "row",
               padding: 20,
-              // backgroundColor: "#ffffff",
+              backgroundColor: "#ffffff",
             }}
           >
             <Image source={require("../../assets/images/homepageicon.png")} />
             <Text
               style={{
                 fontSize: 40,
-                fontFamily: "Lobster",
               }}
             >
               Cura
@@ -92,10 +91,11 @@ const Home = () => {
           >
             <View
               style={{
-                margin: 25,
+                margin: 10,
                 padding: 5,
                 alignItems: "center",
                 borderRadius: 10,
+                
               }}
             >
               <Text style={{ fontSize: 24 }}>{greeting}</Text>
@@ -324,6 +324,7 @@ const Home = () => {
                 <Text>
                   Your latest health report is ready. Please review it to ensure
                   your health is on track.
+                  
                 </Text>
               </View>
             </View>

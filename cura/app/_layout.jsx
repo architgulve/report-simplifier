@@ -6,15 +6,15 @@ import * as Font from 'expo-font'; // ✅
 import "../global.css"
 
 const RootLayout = () => {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  // const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  useEffect(() => {
-    Font.loadAsync({
-      Lobster: require('../assets/fonts/Lobster-Regular.ttf'),
-    }).then(() => setFontsLoaded(true));
-  }, []);
+  // useEffect(() => {
+  //   Font.loadAsync({
+  //     Lobster: require('../assets/fonts/Lobster-Regular.ttf'),
+  //   }).then(() => setFontsLoaded(true));
+  // }, []);
 
-  if (!fontsLoaded) return null; // Don't render anything until fonts are loaded
+  // if (!fontsLoaded) return null; // Don't render anything until fonts are loaded
 
   return (
     <Stack>

@@ -8,7 +8,7 @@ const Index = () => {
   return (
     <SafeAreaView>
       <View style={{ marginTop: 250, alignItems: "center" }}>
-        <Text style={{ fontFamily: "Lobster", fontSize: 70 }}>Cura</Text>
+        <Text style={{ fontFamily: "serif", fontSize: 70 }}>Cura</Text>
       </View>
       <View style={{ width: "100%", marginTop: 300, alignItems: "center" }}>
         <Pressable
