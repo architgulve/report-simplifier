@@ -66,7 +66,6 @@ const Home = () => {
             <Text
               style={{
                 fontSize: 40,
-                fontFamily: "Lobster",
               }}
             >
               Cura

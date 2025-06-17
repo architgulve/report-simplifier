@@ -208,7 +208,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 35,
     marginLeft: 10,
-    fontFamily: "Lobster",
   },
   subtitle: {
     marginTop: 5,
