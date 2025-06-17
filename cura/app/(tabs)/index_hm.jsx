@@ -13,6 +13,8 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useState } from "react";
+import { router } from "expo-router";
+
 
 const Home = () => {
   const hours = new Date().getHours();
@@ -360,6 +362,7 @@ const Home = () => {
               <>
                 <Animated.View style={[{ gap: 16 }, optionsStyle]}>
                   <TouchableOpacity
+                    onPress={() => router.push("/scan")}  
                     style={
                       {
                         // backgroundColor: "white",
