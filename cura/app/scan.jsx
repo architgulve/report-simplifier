@@ -2,21 +2,53 @@ import { View, Text } from "react-native";
 import React, { useEffect, useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions, Camera } from "expo-camera";
 import { Dimensions } from "react-native";
 import { TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as MediaLibrary from "expo-media-library";
+import { useRef } from "react";
+import * as ImagePicker from "expo-image-picker";
 
 const Scanner = () => {
   const [permission, requestPermission] = useCameraPermissions();
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const cameraRef = useRef(null);
+  const [mediaPermission, requestMediaPermission] =
+    MediaLibrary.usePermissions();
   const windowWidth = Dimensions.get("window").width;
+
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync();
+        await MediaLibrary.createAssetAsync(photo.uri);
+        console.log("Photo saved to gallery:", photo.uri);
+      } catch (e) {
+        console.error("Failed to take photo:", e);
+      }
+    }
+  };
+  
+  const openGallery = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      quality: 1,
+    });
+  
+    if (!result.canceled) {
+      console.log("Selected image:", result.assets[0].uri);
+    }
+  };
 
   useEffect(() => {
     if (!permission || !permission.granted) {
       requestPermission();
     }
+    if (!permission?.granted) requestPermission();
+    if (!mediaPermission?.granted) requestMediaPermission();
   }, []);
 
   if (!permission) {
@@ -100,6 +132,7 @@ const Scanner = () => {
             }}
           >
             <CameraView
+              ref={cameraRef}
               style={{
                 // position: "absolute",
                 width: "100%",
@@ -180,7 +213,7 @@ const Scanner = () => {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity>
+            <TouchableOpacity onPress={takePicture}>
               <View
                 style={{
                   borderColor: "#131313",
@@ -203,7 +236,7 @@ const Scanner = () => {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => console.log("pressed")}>
+            <TouchableOpacity onPress={openGallery}>
               <View
                 style={{
                   width: 0.2 * windowWidth,
