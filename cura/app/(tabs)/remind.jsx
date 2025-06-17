@@ -39,16 +39,16 @@ export default function MedicationReminders() {
       {/* Summary Cards */}
       <View style={styles.summaryContainer}>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryNumber}>{takenCount}</Text>
-          <Text>Taken Today</Text>
+          <Text style={[styles.summaryNumber, { color: 'green' }]}>{takenCount}</Text>
+          <Text>Taken</Text>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryNumber}>{pendingCount}</Text>
+          <Text style={[styles.summaryNumber,{color:"red"}]}>{pendingCount}</Text>
           <Text>Pending</Text>
         </View>
         <View style={styles.summaryCard}>
-          <Text style={styles.summaryNumber}>{medications.length}</Text>
-          <Text>Total Meds</Text>
+          <Text style={[styles.summaryNumber,{color:"blue"}]}>{medications.length}</Text>
+          <Text>Total</Text>
         </View>
       </View>
 
@@ -72,10 +72,10 @@ export default function MedicationReminders() {
 
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={styles.actionButton}
+              style={styles.largeActionButton}
               onPress={() => handleToggle(med.id)}
             >
-              <Text style={{ color: 'white' }}>{med.taken ? 'Undo' : 'Mark As Taken'}</Text>
+              <Text style={{ color: 'white', fontSize: 16 }}>{med.taken ? 'Undo' : 'Mark As Taken'}</Text>
             </TouchableOpacity>
             <Switch
               value={med.taken}
@@ -115,19 +115,19 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#E6F4F1', padding: 16 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   headerTitle: { fontSize: 24, fontWeight: 'bold' },
-  mainTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: 'gray', marginBottom: 16 },
+  mainTitle: { fontSize: 28, fontWeight: 'bold', marginBottom: 4, textAlign: 'center' },
+  subtitle: { fontSize: 16, color: 'gray', marginBottom: 16, textAlign: 'center' },
   summaryContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   summaryCard: { backgroundColor: 'white', padding: 16, alignItems: 'center', borderRadius: 8, width: '30%' },
-  summaryNumber: { fontSize: 18, fontWeight: 'bold', marginBottom: 4 },
+  summaryNumber: { fontSize: 25, fontWeight: 'bold', marginBottom: 4 },
   medCard: { borderWidth: 1, borderRadius: 8, padding: 16, marginBottom: 16 },
   medHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   medName: { fontSize: 16, fontWeight: 'bold' },
   statusBadge: { color: 'white', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, fontSize: 12 },
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12 },
-  actionButton: { backgroundColor: '#1E1E2F', padding: 10, borderRadius: 8 },
+  largeActionButton: { backgroundColor: '#1E1E2F', padding: 14, borderRadius: 8 },
   addButton: { backgroundColor: '#FFFFFF', padding: 12, borderRadius: 8, alignItems: 'center', marginBottom: 16 },
   notificationContainer: { backgroundColor: 'white', borderRadius: 8, padding: 16, marginBottom: 32 },
-  notificationTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
+  notificationTitle: { fontSize: 23, fontWeight: 'bold', marginBottom: 12 },
   notificationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
 });
