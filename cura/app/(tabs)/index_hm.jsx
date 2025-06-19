@@ -15,7 +15,6 @@ import Animated, {
 import { useState } from "react";
 import { router } from "expo-router";
 
-
 const Home = () => {
   const hours = new Date().getHours();
   const [fabExpanded, setFabExpanded] = useState(false);
@@ -79,10 +78,12 @@ const Home = () => {
                 justifyContent: "center",
               }}
             >
+              <TouchableOpacity onPress={() => {router.push("/settings")}}>
               <Image
                 source={require("../../assets/images/settings.png")}
                 style={{ width: 30, height: 30 }}
               />
+              </TouchableOpacity>
             </View>
           </View>
           <View
