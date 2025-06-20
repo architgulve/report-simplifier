@@ -10,6 +10,8 @@ import { router } from "expo-router";
 import * as MediaLibrary from "expo-media-library";
 import { useRef } from "react";
 import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
+import * as ImageManipulator from "expo-image-manipulator";
 
 const Scanner = () => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -19,27 +21,55 @@ const Scanner = () => {
     MediaLibrary.usePermissions();
   const windowWidth = Dimensions.get("window").width;
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync();
-        await MediaLibrary.createAssetAsync(photo.uri);
-        console.log("Photo saved to gallery:", photo.uri);
-      } catch (e) {
-        console.error("Failed to take photo:", e);
-      }
+  const resizeImage = async (uri) => {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1000 } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  };
+
+  const uploadImageToBackend = async (uri) => {
+    const resizedUri = await resizeImage(uri);
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: resizedUri,
+      type: "image/jpeg",
+      name: "photo.jpg",
+    });
+
+    try {
+      const res = await axios.post("http://192.168.1.200:8000/ocr/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      console.log("OCR Result:", res.data.text);
+    } catch (err) {
+      console.error("Upload error:", err);
     }
   };
-  
+
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      const photo = await cameraRef.current.takePictureAsync();
+      await MediaLibrary.createAssetAsync(photo.uri);
+      uploadImageToBackend(photo.uri);
+    }
+  };
+
   const openGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: false,
       quality: 1,
     });
-  
+
     if (!result.canceled) {
-      console.log("Selected image:", result.assets[0].uri);
+      const uri = result.assets[0].uri;
+      uploadImageToBackend(uri);
     }
   };
 
