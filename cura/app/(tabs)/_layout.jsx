@@ -18,7 +18,7 @@ const TabLayout = () => {
             }}
           />
           <Tabs.Screen
-            name="remind"
+            name="(medireminders)"
             options={{
               title: "Reminders",
               tabBarIcon: ({ color, size }) => (
