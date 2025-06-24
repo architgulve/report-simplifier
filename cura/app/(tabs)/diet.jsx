@@ -1,7 +1,13 @@
 import React from "react";
-import { View, Text, SafeAreaView, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  SafeAreaView,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { TouchableOpacity } from "react-native-gesture-handler";
 
 const ProgressItem = ({ label, value, max, unit }) => {
   const percentage = (value / max) * 100;
@@ -22,61 +28,46 @@ const ProgressItem = ({ label, value, max, unit }) => {
 const MealCard = ({ title, time, status, calories, items, isPending }) => {
   return (
     <View
-      style={{
-        backgroundColor: status === "Completed" ? "#DBFFDD" : "#f0f0f0",
-        borderRadius: 8,
-        padding: 10,
-        marginVertical: 5,
-        marginHorizontal: 10,
-        borderWidth: 1,
-        borderColor: "#ccc",
-      }}
+      style={[
+        styles.mealCard,
+        {
+          backgroundColor:
+            status === "Completed" ? "#E8FFF0" : "#F5F5F5",
+          borderColor: "#ccc",
+        },
+      ]}
     >
-      {/* Top Row: Title, Time, Status, Calories */}
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+      <View style={styles.mealHeader}>
         <View>
-          <Text style={{ fontWeight: "bold", fontSize: 16 }}>{title}</Text>
-          <Text style={{ color: "#555", fontSize: 12 }}>{time}</Text>
+          <Text style={styles.mealTitle}>{title}</Text>
+          <Text style={styles.mealTime}>{time}</Text>
         </View>
         <View style={{ alignItems: "flex-end" }}>
           <View
-            style={{
-              backgroundColor: "#ddd",
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 2,
-            }}
+            style={[
+              styles.statusBadge,
+              {
+                backgroundColor:
+                  status === "Completed" ? "#E0D6F9" : "#DCDCDC",
+              },
+            ]}
           >
-            <Text style={{ fontSize: 12, fontWeight: "bold" }}>{status}</Text>
+            <Text style={styles.statusText}>{status}</Text>
           </View>
-          <Text style={{ fontSize: 14, marginTop: 4 }}>{calories} cal</Text>
+          <Text style={styles.caloriesText}>{calories} cal</Text>
         </View>
       </View>
-
-      {/* Items */}
-      <View style={{ marginTop: 10 }}>
+      <View style={styles.mealItems}>
         {items.map((item, index) => (
-          <Text key={index} style={{ fontSize: 14 }}>
+          <Text key={index} style={styles.mealItemText}>
             - {item}
           </Text>
         ))}
       </View>
-
-      {/* Button */}
       {isPending && (
-        <View style={{ marginTop: 10, alignItems: "center" }}>
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#fff",
-              padding: 8,
-              borderRadius: 8,
-              width: "90%",
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "#ccc",
-            }}
-          >
-            <Text style={{ fontWeight: "bold" }}>✔ Mark As Taken</Text>
+        <View style={styles.actionButtonWrapper}>
+          <TouchableOpacity style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>✔ Mark As Taken</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -86,62 +77,34 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
 
 const DietPlan = () => {
   return (
-    <SafeAreaView style={{ backgroundColor: "#DFF6FB", flex: 1 }}>
+    <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View>
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.title}>Diet Plan</Text>
             <Text style={styles.subtitle}>
-              Stay on Track with your Healthy Diet
+              Stay on track with your medication schedule
             </Text>
           </View>
 
-          {/* Goal Card */}
+          {/* Goals Section */}
           <View style={styles.goalCard}>
             <View style={styles.goalHeader}>
-              <Ionicons name="disc-outline" size={24} color="green" />
+              <Ionicons name="checkmark-circle-outline" size={22} color="green" />
               <Text style={styles.goalTitle}> Today's Goals</Text>
             </View>
-
-            <ProgressItem
-              label="Calories"
-              value={1650}
-              max={2000}
-              unit="kcal"
-            />
+            <ProgressItem label="Calories" value={1650} max={2000} unit="kcal" />
             <ProgressItem label="Protein" value={85} max={120} unit="g" />
             <ProgressItem label="Water" value={6} max={8} unit="glasses" />
           </View>
-          <View
-            style={{
-              flexDirection: "column",
-              width: "95%",
-              margin: 10,
-              backgroundColor: "white",
-              borderRadius: 10,
-              paddingVertical: 10,
-              alignSelf: "center",
-            }}
-          >
-            {/* Header */}
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginLeft: 10,
-                marginBottom: 10,
-              }}
-            >
-              <Ionicons name="restaurant-outline" size={24} color="black" />
-              <Text
-                style={{ fontSize: 18, marginLeft: 10, fontWeight: "bold" }}
-              >
-                Today's Meals
-              </Text>
-            </View>
 
-            {/* Meals */}
+          {/* Meals Section */}
+          <View style={styles.mealSection}>
+            <View style={styles.mealHeaderSection}>
+              <Ionicons name="restaurant-outline" size={22} color="#333" />
+              <Text style={styles.mealSectionTitle}>Today's Meals</Text>
+            </View>
             <MealCard
               title="Breakfast"
               time="10:00 AM"
@@ -152,10 +115,9 @@ const DietPlan = () => {
             <MealCard
               title="Lunch"
               time="1:00 PM"
-              status="Pending"
+              status="Completed"
               calories={450}
               items={["Grilled Chicken Salad", "Quinoa", "Olive Oil Dressing"]}
-              isPending
             />
             <MealCard
               title="Dinner"
@@ -166,25 +128,14 @@ const DietPlan = () => {
               isPending
             />
           </View>
-          <View
-            style={{
-              flexDirection: "column",
-              width: "95%",
-              margin: 10,
-              backgroundColor: "white",
-              borderRadius: 10,
-              paddingVertical: 10,
-              alignSelf: "center",
-              padding:10
-            }}
-          >
+
+          {/* Recommendation Section */}
+          <View style={styles.recommendationCard}>
             <View style={styles.goalHeader}>
-              <Ionicons name="person" size={24} color="black"  />
-              <Text>
-                <Text style={styles.goalTitle}>Personalized Recommandation</Text>
-              </Text>
+              <Ionicons name="person" size={22} color="black" />
+              <Text style={styles.goalTitle}> Personalized Recommandation</Text>
             </View>
-            <Text>
+            <Text style={styles.recommendationText}>
               Based on your current progress, we recommend increasing your
               protein intake to support muscle recovery and growth. Consider
               adding a protein shake or more lean meats to your meals.
@@ -197,44 +148,47 @@ const DietPlan = () => {
 };
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#E6FAFD",
+    flex: 1,
+  },
+  innerContainer: {
+  paddingTop: 50, // increased from 24 to 100
+  paddingHorizontal: 16,
+},
   header: {
     alignItems: "center",
     justifyContent: "center",
-    height: 100,
-    flexDirection: "column",
-    backgroundColor: "lightblue",
-    marginTop: 15,
+    paddingVertical: 20,
   },
   title: {
     fontSize: 35,
-    marginLeft: 10,
+    fontWeight: "600",
   },
   subtitle: {
+    fontSize: 14,
     marginTop: 5,
-    fontSize: 15,
+    color: "#555",
   },
   goalCard: {
-    flexDirection: "column",
-    margin: 10,
-    backgroundColor: "white",
+    backgroundColor: "#fff",
+    margin: 12,
     borderRadius: 10,
-    width: "95%",
     paddingVertical: 10,
+    paddingHorizontal: 12,
   },
   goalHeader: {
     flexDirection: "row",
-    padding: 5,
     alignItems: "center",
-    marginBottom: 5,
+    marginBottom: 8,
   },
   goalTitle: {
-    fontSize: 18,
-    marginLeft: 20,
+    fontSize: 16,
     fontWeight: "bold",
+    marginLeft: 10,
   },
   progressContainer: {
-    marginHorizontal: 20,
-    marginBottom: 16,
+    marginVertical: 8,
   },
   labelRow: {
     flexDirection: "row",
@@ -242,22 +196,108 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   label: {
-    fontSize: 16,
-    color: "#000",
+    fontSize: 14,
+    color: "#333",
   },
   value: {
-    fontSize: 14,
-    color: "#000",
+    fontSize: 13,
+    color: "#333",
   },
   progressBarBackground: {
     height: 8,
     backgroundColor: "#e5e5e5",
     borderRadius: 4,
-    overflow: "hidden",
   },
   progressBarFill: {
     height: "100%",
     backgroundColor: "#000",
+    borderRadius: 4,
+  },
+  mealSection: {
+    backgroundColor: "#fff",
+    margin: 12,
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+  },
+  mealHeaderSection: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+    marginLeft: 6,
+  },
+  mealSectionTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  mealCard: {
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+  },
+  mealHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  mealTitle: {
+    fontSize: 15,
+    fontWeight: "bold",
+  },
+  mealTime: {
+    fontSize: 12,
+    color: "#555",
+  },
+  statusBadge: {
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#444",
+  },
+  caloriesText: {
+    fontSize: 14,
+    marginTop: 4,
+    color: "#333",
+  },
+  mealItems: {
+    marginTop: 10,
+  },
+  mealItemText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  actionButtonWrapper: {
+    marginTop: 10,
+    alignItems: "center",
+  },
+  actionButton: {
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 8,
+    width: "90%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ccc",
+  },
+  actionButtonText: {
+    fontWeight: "bold",
+    color: "#333",
+  },
+  recommendationCard: {
+    backgroundColor: "#fff",
+    margin: 12,
+    borderRadius: 10,
+    padding: 12,
+  },
+  recommendationText: {
+    marginTop: 4,
+    fontSize: 13,
+    color: "#333",
   },
 });
 
