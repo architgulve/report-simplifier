@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 export default function MedicationReminders() {
   const [medications, setMedications] = useState([
@@ -86,7 +87,11 @@ export default function MedicationReminders() {
       ))}
 
       {/* Add Medication Button */}
-      <TouchableOpacity style={styles.addButton}>
+      <TouchableOpacity style={
+        styles.addButton
+       }
+       onPress={() => router.push("/(medireminders)/addmedications")}
+      >
         <Text style={{ color: 'black' }}>+ Add New Medication</Text>
       </TouchableOpacity>
 
