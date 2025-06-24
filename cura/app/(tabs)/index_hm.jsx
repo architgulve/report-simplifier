@@ -59,11 +59,17 @@ const Home = () => {
             style={{
               alignItems: "left",
               flexDirection: "row",
-              padding: 20,
+              padding: 10,
               backgroundColor: "#ffffff",
             }}
           >
-            <Image source={require("../../assets/images/homepageicon.png")} />
+            <Image source={require("../../assets/images/CuraLogo.png")} 
+            style={{
+              resizeMode: "contain",
+              width: 50,
+              height: 50
+            }}
+            />
             <Text
               style={{
                 fontSize: 40,
