@@ -1,5 +1,5 @@
 import { View, Text, StatusBar } from "react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
@@ -14,37 +14,75 @@ import Animated, {
 } from "react-native-reanimated";
 import { useState } from "react";
 import { router } from "expo-router";
+import {
+  initializeDatabase,
+  insertSetting,
+  getSettings,
+} from "../../utils/databse";
 
 const Home = () => {
+  const [userName, setUserName] = useState("Guest");
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        initializeDatabase();
+        const settings = await getSettings();
+
+        if (settings && settings.name) {
+          setUserName(settings.name);
+        } else {
+          setUserName("Guest"); // Default fallback
+        }
+      } catch (error) {
+        console.log("Error loading user data:", error);
+        setUserName("Guest"); // Fallback on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+
+    loadUserData();
+  }, []);
+
+  const getGreeting = () => {
+    const name = userName || 'Guest';
+    
+    if (hours < 12) {
+      return `Good Morning, ${name}!`;
+    } else if (hours < 18) {
+      return `Good Afternoon, ${name}!`;
+    } else {
+      return `Good Evening, ${name}!`;
+    }
+  };
+
   const hours = new Date().getHours();
   const [fabExpanded, setFabExpanded] = useState(false);
   const fabSize = useSharedValue(60);
   const fabOpacity = useSharedValue(0);
 
   const fabStyle = useAnimatedStyle(() => ({
-    width: withTiming(fabExpanded ? 200 : 60,),
+    width: withTiming(fabExpanded ? 200 : 60),
     height: withTiming(fabExpanded ? 120 : 60),
     borderRadius: withTiming(fabExpanded ? 20 : 30),
   }));
   const optionsStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(fabExpanded ? 1 : 0,{
+    opacity: withTiming(fabExpanded ? 1 : 0, {
       duration: 1000,
     }),
   }));
 
-  let greeting = "Good Evening, Sarah!";
-  if (hours < 12) {
-    greeting = "Good Morning, Sarah!";
-  } else if (hours < 18) {
-    greeting = "Good Afternoon, Sarah!";
-  }
-
+  
   return (
-    <SafeAreaView edges={["top"]} 
-    style={{
-      backgroundColor: "#DFF6FB",
-      flex: 1,
-    }}
+    <SafeAreaView
+      edges={["top"]}
+      style={{
+        backgroundColor: "#DFF6FB",
+        flex: 1,
+      }}
     >
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
 
@@ -78,11 +116,15 @@ const Home = () => {
                 justifyContent: "center",
               }}
             >
-              <TouchableOpacity onPress={() => {router.push("/settings")}}>
-              <Image
-                source={require("../../assets/images/settings.png")}
-                style={{ width: 30, height: 30 }}
-              />
+              <TouchableOpacity
+                onPress={() => {
+                  router.push("/settings");
+                }}
+              >
+                <Image
+                  source={require("../../assets/images/settings.png")}
+                  style={{ width: 30, height: 30 }}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -98,10 +140,18 @@ const Home = () => {
                 padding: 5,
                 alignItems: "center",
                 borderRadius: 10,
-                
               }}
             >
-              <Text style={{ fontSize: 24 }}>{greeting}</Text>
+              <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "600",
+                color: "#333",
+                textAlign: "center",
+              }}
+            >
+              {isLoading ? "Loading..." : getGreeting()}
+            </Text>
               <Text stle={{ fontSize: 16, lineHeight: 30 }}>
                 Let's keep track of your Health today
               </Text>
@@ -327,7 +377,6 @@ const Home = () => {
                 <Text>
                   Your latest health report is ready. Please review it to ensure
                   your health is on track.
-                  
                 </Text>
               </View>
             </View>
@@ -352,7 +401,6 @@ const Home = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 // opacity: 0.9,
-                
               },
               fabStyle,
             ]}
@@ -363,7 +411,7 @@ const Home = () => {
               <>
                 <Animated.View style={[{ gap: 16 }, optionsStyle]}>
                   <TouchableOpacity
-                    onPress={() => router.push("/scan")}  
+                    onPress={() => router.push("/scan")}
                     style={
                       {
                         // backgroundColor: "white",
@@ -397,6 +445,8 @@ const Home = () => {
                         // backgroundColor: "white",
                       }
                     }
+                    onPress={() => router.push("/upload")}
+                    
                   >
                     <View
                       style={{
@@ -441,9 +491,7 @@ const Home = () => {
                 backgroundColor: "rgba(0,0,0,0.4)",
                 zIndex: 1,
               }}
-            >
-              
-            </View>
+            ></View>
           </TouchableWithoutFeedback>
         )}
       </View>

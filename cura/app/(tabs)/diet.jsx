@@ -1,7 +1,15 @@
 import React from "react";
 import { View, Text, SafeAreaView, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import { Pressable, TouchableOpacity } from "react-native-gesture-handler";
+import { useState,useEffect } from "react";
+import { 
+  initializeDatabase, 
+  insertSetting, 
+  getSettings,
+  insertDiet,
+  getLatestDiet 
+} from '../../utils/databse';
 
 const ProgressItem = ({ label, value, max, unit }) => {
   const percentage = (value / max) * 100;
@@ -19,7 +27,9 @@ const ProgressItem = ({ label, value, max, unit }) => {
   );
 };
 
-const MealCard = ({ title, time, status, calories, items, isPending }) => {
+const MealCard = ({ title, time, status: initialStatus, calories, items, isPending }) => {
+  const [status, setStatus] = useState(initialStatus);
+
   return (
     <View
       style={{
@@ -63,9 +73,9 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
       </View>
 
       {/* Button */}
-      {isPending && (
+      {isPending && status !== "Completed" && (
         <View style={{ marginTop: 10, alignItems: "center" }}>
-          <TouchableOpacity
+          <Pressable
             style={{
               backgroundColor: "#fff",
               padding: 8,
@@ -75,9 +85,13 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
               borderWidth: 1,
               borderColor: "#ccc",
             }}
+            onPress={() => {
+              console.log(`${title} marked as taken`);
+              setStatus("Completed"); // ✅ triggers re-render
+            }}
           >
             <Text style={{ fontWeight: "bold" }}>✔ Mark As Taken</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
       )}
     </View>
@@ -85,6 +99,11 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
 };
 
 const DietPlan = () => {
+
+  useEffect(() => {
+  initializeDatabase();
+}, []);
+
   return (
     <SafeAreaView style={{ backgroundColor: "#DFF6FB", flex: 1 }}>
       <ScrollView showsVerticalScrollIndicator={false}>

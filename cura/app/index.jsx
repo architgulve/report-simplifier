@@ -1,10 +1,12 @@
 import { View, Text, Pressable } from "react-native";
-import React from "react";
+import React, { use } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 
 const Index = () => {
+  
+
   return (
     <SafeAreaView>
       <View style={{ marginTop: 250, alignItems: "center" }}>
