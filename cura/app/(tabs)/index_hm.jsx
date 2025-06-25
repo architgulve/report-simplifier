@@ -1,5 +1,5 @@
 import { View, Text, StatusBar } from "react-native";
-import React from "react";
+import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
@@ -14,37 +14,114 @@ import Animated, {
 } from "react-native-reanimated";
 import { useState } from "react";
 import { router } from "expo-router";
+import {
+  initializeDatabase,
+  insertSetting,
+  getSettings,
+} from "../../utility/database";
+import HomeReminderPreview from "../../components/homepageremind";
+
 
 const Home = () => {
+  const [userName, setUserName] = useState("Guest");
+  const [isLoading, setIsLoading] = useState(true);
+  const [previewMeds, setPreviewMeds] = useState([]);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        initializeDatabase();
+        const settings = await getSettings();
+
+        if (settings && settings.name) {
+          setUserName(settings.name);
+        } else {
+          setUserName("Guest"); // Default fallback
+        }
+      } catch (error) {
+        console.log("Error loading user data:", error);
+        setUserName("Guest"); // Fallback on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+
+    loadUserData();
+
+    const fetchData = async () => {
+      await createMedicineTable();
+      const meds = await getAllMedicines();
+
+      const takenMapStr = await AsyncStorage.getItem("takenStatus");
+      const takenMap = takenMapStr ? JSON.parse(takenMapStr) : {};
+
+      const formatted = [];
+
+      meds.forEach((med) => {
+        const times = med.TimeToBeTakenAt.split(",");
+        const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
+
+        times.forEach((time, index) => {
+          const timeLabel =
+            index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
+          const medId = `${med.MedicineID}-${index}`;
+
+          if (time && time.trim()) {
+            formatted.push({
+              id: medId,
+              name: med.MedicineName,
+              time: time.trim(),
+              timeSlot: timeLabel,
+              taken: takenMap[medId] ?? false,
+            });
+          }
+        });
+      });
+
+      formatted.sort((a, b) => a.time.localeCompare(b.time));
+      setPreviewMeds(formatted.slice(0, 2)); // Show only first 2
+    };
+
+    fetchData();
+  }, []);
+
+  const getGreeting = () => {
+    const name = userName || 'Guest';
+    
+    if (hours < 12) {
+      return `Good Morning, ${name}!`;
+    } else if (hours < 18) {
+      return `Good Afternoon, ${name}!`;
+    } else {
+      return `Good Evening, ${name}!`;
+    }
+  };
+
   const hours = new Date().getHours();
   const [fabExpanded, setFabExpanded] = useState(false);
   const fabSize = useSharedValue(60);
   const fabOpacity = useSharedValue(0);
 
   const fabStyle = useAnimatedStyle(() => ({
-    width: withTiming(fabExpanded ? 200 : 60,),
+    width: withTiming(fabExpanded ? 200 : 60),
     height: withTiming(fabExpanded ? 120 : 60),
     borderRadius: withTiming(fabExpanded ? 20 : 30),
   }));
   const optionsStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(fabExpanded ? 1 : 0,{
+    opacity: withTiming(fabExpanded ? 1 : 0, {
       duration: 1000,
     }),
   }));
 
-  let greeting = "Good Evening, Sarah!";
-  if (hours < 12) {
-    greeting = "Good Morning, Sarah!";
-  } else if (hours < 18) {
-    greeting = "Good Afternoon, Sarah!";
-  }
-
+  
   return (
-    <SafeAreaView edges={["top"]} 
-    style={{
-      backgroundColor: "#DFF6FB",
-      flex: 1,
-    }}
+    <SafeAreaView
+      edges={["top"]}
+      style={{
+        backgroundColor: "#DFF6FB",
+        flex: 1,
+      }}
     >
       <StatusBar backgroundColor="#ffffff" barStyle="dark-content" />
 
@@ -59,17 +136,11 @@ const Home = () => {
             style={{
               alignItems: "left",
               flexDirection: "row",
-              padding: 10,
+              padding: 20,
               backgroundColor: "#ffffff",
             }}
           >
-            <Image source={require("../../assets/images/CuraLogo.png")} 
-            style={{
-              resizeMode: "contain",
-              width: 50,
-              height: 50
-            }}
-            />
+            <Image source={require("../../assets/images/homepageicon.png")} />
             <Text
               style={{
                 fontSize: 40,
@@ -84,11 +155,15 @@ const Home = () => {
                 justifyContent: "center",
               }}
             >
-              <TouchableOpacity onPress={() => {router.push("/settings")}}>
-              <Image
-                source={require("../../assets/images/settings.png")}
-                style={{ width: 30, height: 30 }}
-              />
+              <TouchableOpacity
+                onPress={() => {
+                  router.push("/settings");
+                }}
+              >
+                <Image
+                  source={require("../../assets/images/settings.png")}
+                  style={{ width: 30, height: 30 }}
+                />
               </TouchableOpacity>
             </View>
           </View>
@@ -104,10 +179,18 @@ const Home = () => {
                 padding: 5,
                 alignItems: "center",
                 borderRadius: 10,
-                
               }}
             >
-              <Text style={{ fontSize: 24 }}>{greeting}</Text>
+              <Text
+              style={{
+                fontSize: 24,
+                fontWeight: "600",
+                color: "#333",
+                textAlign: "center",
+              }}
+            >
+              {isLoading ? "Loading..." : getGreeting()}
+            </Text>
               <Text stle={{ fontSize: 16, lineHeight: 30 }}>
                 Let's keep track of your Health today
               </Text>
@@ -182,128 +265,7 @@ const Home = () => {
                 </View>
               </View>
             </View>
-            <View
-              style={{
-                widht: "100%",
-                height: "auto",
-                margin: 15,
-                backgroundColor: "white",
-                borderRadius: 10,
-                padding: 10,
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center" }}>
-                <Ionicons name="alarm-outline" size={30} color="black" />
-                <Text
-                  style={{ fontSize: 20, fontWeight: "bold", marginLeft: 10 }}
-                >
-                  Medication Reminders
-                </Text>
-              </View>
-              <View>
-                <View
-                  style={{
-                    backgroundColor: "#F0F0F0",
-                    widht: "100%",
-                    height: 70,
-                    marginTop: 10,
-                    borderRadius: 10,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingLeft: 10,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: "55%",
-                      height: 50,
-                      alignItems: "left",
-                      justifyContent: "center",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <Text>Lisinopril</Text>
-                    <Text>02:00pm</Text>
-                  </View>
-                  <View
-                    style={{
-                      width: "45%",
-                      height: 45,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: "#FFB6C1",
-                      borderRadius: 10,
-                      padding: 5,
-                    }}
-                  >
-                    <Text style={{ color: "darkred", fontWeight: "bold" }}>
-                      Due Now
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: "#F0F0F0",
-                    widht: "100%",
-                    height: 70,
-                    marginTop: 10,
-                    borderRadius: 10,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingLeft: 10,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: "55%",
-                      height: 50,
-                      alignItems: "left",
-                      justifyContent: "center",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <Text>Metformin</Text>
-                    <Text>09:00pm</Text>
-                  </View>
-                  <View
-                    style={{
-                      width: "45%",
-                      height: 45,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: "#C0C0C0",
-                      borderRadius: 10,
-                      padding: 5,
-                    }}
-                  >
-                    <Text style={{ color: "grey", fontWeight: "bold" }}>
-                      Upcoming
-                    </Text>
-                  </View>
-                </View>
-                <View
-                  style={{
-                    backgroundColor: "#F0F0F0",
-                    widht: "50%",
-                    height: 50,
-                    marginTop: 10,
-                    borderRadius: 10,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    paddingLeft: 10,
-                    alignContent: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Ionicons
-                    name="notifications-outline"
-                    size={20}
-                    color="black"
-                  />
-                  <Text>View All Reminders</Text>
-                </View>
-              </View>
-            </View>
+          <HomeReminderPreview/>
             <View
               style={{
                 widht: "100%",
@@ -333,7 +295,6 @@ const Home = () => {
                 <Text>
                   Your latest health report is ready. Please review it to ensure
                   your health is on track.
-                  
                 </Text>
               </View>
             </View>
@@ -358,7 +319,6 @@ const Home = () => {
                 justifyContent: "center",
                 alignItems: "center",
                 // opacity: 0.9,
-                
               },
               fabStyle,
             ]}
@@ -369,7 +329,7 @@ const Home = () => {
               <>
                 <Animated.View style={[{ gap: 16 }, optionsStyle]}>
                   <TouchableOpacity
-                    onPress={() => router.push("/scan")}  
+                    onPress={() => router.push("/scan")}
                     style={
                       {
                         // backgroundColor: "white",
@@ -403,6 +363,8 @@ const Home = () => {
                         // backgroundColor: "white",
                       }
                     }
+                    onPress={() => router.push("/upload")}
+                    
                   >
                     <View
                       style={{
@@ -447,9 +409,7 @@ const Home = () => {
                 backgroundColor: "rgba(0,0,0,0.4)",
                 zIndex: 1,
               }}
-            >
-              
-            </View>
+            ></View>
           </TouchableWithoutFeedback>
         )}
       </View>
