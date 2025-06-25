@@ -41,7 +41,7 @@ const Scanner = () => {
     });
 
     try {
-      const res = await axios.post("http://192.168.1.200:8000/ocr/", formData, {
+      const res = await axios.post("http://192.168.69.47:8000/ocr/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
