@@ -12,6 +12,7 @@ import { useRef } from "react";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import * as ImageManipulator from "expo-image-manipulator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const Scanner = () => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -41,12 +42,35 @@ const Scanner = () => {
     });
 
     try {
-      const res = await axios.post("http://192.168.1.200:8000/ocr/", formData, {
+      const res = await axios.post("http://<IP>:8000/ocr/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log("OCR Result:", res.data.text);
+      const responseText = res.data.text;
+      console.log("Full LLM Response:", responseText);
+
+      const startIndex = responseText.indexOf("[");
+      const endIndex = responseText.indexOf("]") + 1;
+
+      const jsonPart = responseText.slice(startIndex, endIndex);
+      const dietPart = responseText.slice(endIndex).trim();
+
+      let medicineData = [];
+      try {
+        medicineData = JSON.parse(jsonPart);
+      } catch (e) {
+        console.error("Failed to parse medicine JSON:", e, jsonPart);
+      }
+
+      const dietText = dietPart.startsWith("Diet Recommendation:")
+        ? dietPart
+        : "Diet Recommendation:\n" + dietPart;
+
+      await AsyncStorage.setItem("dietRecommendation", dietText);
+
+      console.log("Medicine Data:", medicineData);
+      console.log("Diet Recommendation:", dietText);
     } catch (err) {
       console.error("Upload error:", err);
     }

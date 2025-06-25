@@ -15,10 +15,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-reader = easyocr.Reader(['en'])
+reader = easyocr.Reader(["en"])
 
 # Replace with your Groq API key
 GROQ_API_KEY = ""
+
 
 @app.post("/ocr/")
 async def ocr_and_reminders(file: UploadFile = File(...)):
@@ -31,7 +32,35 @@ async def ocr_and_reminders(file: UploadFile = File(...)):
 
     extracted_text = " ".join(result)
 
-    prompt = f"""You are a helpful assistant. Here is a medical discharge report:\n\n{extracted_text}\n\nFrom this, extract reminders in bullet points. Keep it short and clear."""
+    prompt = f"""
+You are a medical assistant. Here is a medical discharge report:
+
+{extracted_text}
+
+1. Extract only medicine-related instructions and return them as a valid JSON array strictly in this format, Do not add any extra information in the JSON other than what is told.
+The medicine field should only contain the name of the medicine
+The dosage field should only contain a number with a unit of measurement regarding medicine quantity
+The morning, afternoon, and evening fields should only contain true or false::
+
+[
+  {{
+    "medicine": "Paracetamol",
+    "dosage": "500mg",
+    "morning": true,
+    "afternoon": false,
+    "evening": true
+  }},
+  ...
+]
+
+2. Then, provide a short diet recommendation labeled exactly as **Diet Recommendation**, with main topics:
+- What to include in the diet
+- What to avoid in the diet
+Use info from the discharge report. As well as any general tips related to the medicines.
+Return the text in a structured paragraph, in about 3-4 sentences.
+
+Return only the JSON array and the diet recommendation. Do not include any explanations, notes, or extra text.
+"""
 
     try:
         response = requests.post(
@@ -43,11 +72,14 @@ async def ocr_and_reminders(file: UploadFile = File(...)):
             json={
                 "model": "llama3-8b-8192",
                 "messages": [
-                    {"role": "system", "content": "You are an assistant that extracts key medical instructions from discharge reports."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You are an assistant that extracts key medical instructions from discharge reports.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
-                "temperature": 0.4
-            }
+                "temperature": 0.4,
+            },
         )
 
         groq_reply = response.json()["choices"][0]["message"]["content"]
@@ -55,4 +87,6 @@ async def ocr_and_reminders(file: UploadFile = File(...)):
         return JSONResponse(content={"text": groq_reply})
 
     except Exception as e:
-        return JSONResponse(content={"text": "Error processing Groq API", "error": str(e)})
+        return JSONResponse(
+            content={"text": "Error processing Groq API", "error": str(e)}
+        )

@@ -8,6 +8,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useState } from "react";
+import { useEffect } from "react";
+import LottieView from "lottie-react-native";
 
 const ProgressItem = ({ label, value, max, unit }) => {
   const percentage = (value / max) * 100;
@@ -31,8 +35,7 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
       style={[
         styles.mealCard,
         {
-          backgroundColor:
-            status === "Completed" ? "#E8FFF0" : "#F5F5F5",
+          backgroundColor: status === "Completed" ? "#E8FFF0" : "#F5F5F5",
           borderColor: "#ccc",
         },
       ]}
@@ -47,8 +50,7 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
             style={[
               styles.statusBadge,
               {
-                backgroundColor:
-                  status === "Completed" ? "#E0D6F9" : "#DCDCDC",
+                backgroundColor: status === "Completed" ? "#E0D6F9" : "#DCDCDC",
               },
             ]}
           >
@@ -76,6 +78,29 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
 };
 
 const DietPlan = () => {
+  const [pdr, setPdr] = useState("hello");
+
+  const loadDiet = async () => {
+    try {
+      const storedDiet = await AsyncStorage.getItem("dietRecommendation");
+      if (storedDiet !== null) {
+        setPdr(cleanDietText(storedDiet));
+      }
+    } catch (e) {
+      console.error("Error loading diet:", e);
+    }
+  };
+  const cleanDietText = (text) => {
+    return text
+      .replace(/^\s*Diet Recommendation:\s*/i, "")
+      .replace(/^\s*\*\*Diet Recommendation\*\*\s*/i, "")
+      .trim();
+  };
+
+  useEffect(() => {
+    loadDiet();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -88,13 +113,58 @@ const DietPlan = () => {
             </Text>
           </View>
 
+          <View style={styles.recommendationCard}>
+            <View style={styles.goalHeader}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                }}
+              >
+                <LottieView
+                  source={require("../../assets/animations/AIHeart.json")}
+                  autoPlay
+                  loop
+                  style={{
+                    width: 50,
+                    height: 50,
+                    // backgroundColor: "black",
+                  }}
+                ></LottieView>
+                {/* <Ionicons name="person" size={22} color="black" /> */}
+                <Text style={styles.goalTitle}>
+                  {" "}
+                  AI Recommendation
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={loadDiet}
+                style={{
+                  padding: 5,
+                }}
+              >
+                <Ionicons name="refresh-outline" size={22} color="grey" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.recommendationText}>{pdr}</Text>
+          </View>
+
           {/* Goals Section */}
           <View style={styles.goalCard}>
             <View style={styles.goalHeader}>
-              <Ionicons name="checkmark-circle-outline" size={22} color="green" />
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={22}
+                color="green"
+              />
               <Text style={styles.goalTitle}> Today's Goals</Text>
             </View>
-            <ProgressItem label="Calories" value={1650} max={2000} unit="kcal" />
+            <ProgressItem
+              label="Calories"
+              value={1650}
+              max={2000}
+              unit="kcal"
+            />
             <ProgressItem label="Protein" value={85} max={120} unit="g" />
             <ProgressItem label="Water" value={6} max={8} unit="glasses" />
           </View>
@@ -128,19 +198,6 @@ const DietPlan = () => {
               isPending
             />
           </View>
-
-          {/* Recommendation Section */}
-          <View style={styles.recommendationCard}>
-            <View style={styles.goalHeader}>
-              <Ionicons name="person" size={22} color="black" />
-              <Text style={styles.goalTitle}> Personalized Recommandation</Text>
-            </View>
-            <Text style={styles.recommendationText}>
-              Based on your current progress, we recommend increasing your
-              protein intake to support muscle recovery and growth. Consider
-              adding a protein shake or more lean meats to your meals.
-            </Text>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -153,9 +210,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   innerContainer: {
-  paddingTop: 50, // increased from 24 to 100
-  paddingHorizontal: 16,
-},
+    paddingTop: 50, // increased from 24 to 100
+    paddingHorizontal: 16,
+  },
   header: {
     alignItems: "center",
     justifyContent: "center",
@@ -181,11 +238,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 8,
+    justifyContent: "space-between",
   },
   goalTitle: {
     fontSize: 16,
     fontWeight: "bold",
-    marginLeft: 10,
+    marginLeft: 0,
   },
   progressContainer: {
     marginVertical: 8,
@@ -293,6 +351,8 @@ const styles = StyleSheet.create({
     margin: 12,
     borderRadius: 10,
     padding: 12,
+    borderColor: "#FFC0CB",
+    borderWidth: 0,
   },
   recommendationText: {
     marginTop: 4,

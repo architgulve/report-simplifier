@@ -1,5 +1,13 @@
-import React, { useState } from 'react';
-import { SafeAreaView, ScrollView, View, Text, TextInput, Switch, StyleSheet } from 'react-native';
+import React, { useState } from "react";
+import {
+  SafeAreaView,
+  ScrollView,
+  View,
+  Text,
+  TextInput,
+  Switch,
+  StyleSheet,
+} from "react-native";
 
 export default function ProfileSettings() {
   const [pushNotifications, setPushNotifications] = useState(false);
@@ -12,7 +20,6 @@ export default function ProfileSettings() {
         <Text style={styles.title}>Settings</Text>
         <Text style={styles.subtitle}>Manage your health information</Text>
 
-        
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Personal Information</Text>
           <Text style={styles.label}>Full Name</Text>
@@ -21,12 +28,14 @@ export default function ProfileSettings() {
           <TextInput keyboardType="numeric" style={styles.input} />
         </View>
 
-        
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Notification Settings</Text>
           <View style={styles.row}>
             <Text>Push Notifications</Text>
-            <Switch value={pushNotifications} onValueChange={setPushNotifications} />
+            <Switch
+              value={pushNotifications}
+              onValueChange={setPushNotifications}
+            />
           </View>
           <View style={styles.row}>
             <Text>Voice Reminders</Text>
@@ -38,7 +47,6 @@ export default function ProfileSettings() {
           </View>
         </View>
 
-        
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Language & Preference</Text>
           <TextInput value="English" editable={false} style={styles.input} />
@@ -50,7 +58,6 @@ export default function ProfileSettings() {
           </View>
         </View>
 
-        
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Medical Information</Text>
           <Text style={styles.label}>Blood Group</Text>
@@ -68,29 +75,29 @@ export default function ProfileSettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E7F6FB',
+    backgroundColor: "#E7F6FB",
   },
   scrollView: {
     padding: 16,
   },
   title: {
     fontSize: 30,
-    fontWeight: '700',
-    textAlign: 'center',
+    fontWeight: "700",
+    textAlign: "center",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 16,
-    color: '#555',
+    color: "#555",
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
@@ -98,45 +105,45 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 12,
   },
   label: {
     fontSize: 14,
-    color: '#444',
+    color: "#444",
     marginBottom: 4,
     marginTop: 8,
   },
   input: {
-    backgroundColor: '#F4F4F4',
+    backgroundColor: "#F4F4F4",
     borderRadius: 8,
     padding: 10,
     marginBottom: 12,
   },
   inputReadonly: {
-    backgroundColor: '#F7F2F2',
+    backgroundColor: "#F7F2F2",
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
   },
   row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
   textSize: {
     fontSize: 14,
-    color: '#444',
+    color: "#444",
   },
   textSizeBox: {
-    backgroundColor: '#F4F4F4',
+    backgroundColor: "#F4F4F4",
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
   },
   textSizeValue: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
   },
 });
