@@ -78,6 +78,7 @@ const Scanner = () => {
 
       console.log("Medicine Data:", medicineData);
       console.log("Diet Recommendation:", dietText);
+      router.push("/confirmation");
     } catch (err) {
       console.error("Upload error:", err);
     }

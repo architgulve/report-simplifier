@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import LottieView from "lottie-react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { addNoti } from "../../utility/database";
 
 const Confirmation = () => {
   const [mediData, setMediData] = useState([]);
@@ -18,6 +19,15 @@ const Confirmation = () => {
       }
     } catch (err) {
       console.error("❌ Error parsing medicineData:", err);
+    }
+  };
+
+  const handleAcceptPress = async () => {
+    for (const med of mediData) {
+      const result = await addNoti(med.name, med.time);
+      if (result) {
+        console.log("✅ Notification added successfully for", med.name);
+      }
     }
   };
 
@@ -85,14 +95,14 @@ const Confirmation = () => {
                 <Text
                   style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10 }}
                 >
-                  {med.medicine}
+                  {med.name}
                 </Text>
-                <Text>Dosage: {med.dosage}</Text>
+                <Text>Time: {med.time}</Text>
 
                 <View style={{ marginTop: 10 }}>
-                  {med.morning && <Text>🕗 Morning: Yes</Text>}
+                  {/* {med.morning && <Text>🕗 Morning: Yes</Text>}
                   {med.afternoon && <Text>🌤️ Afternoon: Yes</Text>}
-                  {med.evening && <Text>🌙 Evening: Yes</Text>}
+                  {med.evening && <Text>🌙 Evening: Yes</Text>} */}
                 </View>
               </View>
             ))
@@ -110,7 +120,11 @@ const Confirmation = () => {
               padding: 10,
             }}
           >
-            <TouchableOpacity onPress={() => {router.back();}}>
+            <TouchableOpacity
+              onPress={() => {
+                router.navigate("/scan");
+              }}
+            >
               <View
                 style={{
                   flexDirection: "row",
@@ -140,7 +154,12 @@ const Confirmation = () => {
               padding: 10,
             }}
           >
-            <TouchableOpacity onPress={() => {}}>
+            <TouchableOpacity
+              onPress={() => {
+                handleAcceptPress();
+                router.navigate("/(tabs)/(medireminders)/remind");
+              }}
+            >
               <View
                 style={{
                   flexDirection: "row",

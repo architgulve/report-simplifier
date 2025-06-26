@@ -328,7 +328,7 @@ const Home = () => {
               <>
                 <Animated.View style={[{ gap: 16 }, optionsStyle]}>
                   <TouchableOpacity
-                    onPress={() => router.push("/(scanupload)/confirmation")}
+                    onPress={() => router.push("/(scanupload)/scan")}
                     style={
                       {
                         // backgroundColor: "white",

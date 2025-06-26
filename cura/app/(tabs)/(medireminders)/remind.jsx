@@ -14,6 +14,8 @@ import {
   getAllMedicines,
   createMedicineTable,
   deleteMedicine,
+  getAllNotifications,
+  deleteNoti,
 } from "../../../utility/database";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
@@ -28,13 +30,15 @@ export default function MedicationReminders() {
 
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notis, setNotis] = useState([]);
 
   const fetchMeds = async () => {
     try {
       setLoading(true);
       await createMedicineTable();
       const meds = await getAllMedicines();
-
+      const noti = await getAllNotifications();
+      setNotis(noti);
       const formatted = [];
 
       // Get saved taken statuses from storage
@@ -198,6 +202,15 @@ export default function MedicationReminders() {
           </View>
         </View>
 
+        <View>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            marginBottom: 20,
+            marginTop: 20,
+          }}>Medication Reminders</Text>
+        </View>
+
         {/* Medication List */}
         {medications.length === 0 ? (
           <View style={styles.emptyState}>
@@ -208,64 +221,110 @@ export default function MedicationReminders() {
             </Text>
           </View>
         ) : (
-          medications.map((med) => (
-            <View
-              key={med.id}
-              style={[
-                styles.medCard,
-                {
-                  backgroundColor: med.taken ? "#E0F8E0" : "#F5F5F5",
-                  borderColor: med.taken ? "green" : "#ccc",
-                },
-              ]}
-            >
-              <View style={styles.medHeader}>
-                <View style={styles.medInfo}>
-                  <Text style={styles.medName}>{med.name}</Text>
-                  <Text style={styles.timeSlotLabel}>{med.timeSlot} Dose</Text>
-                </View>
-                <View style={styles.headerRight}>
-                  <Text
-                    style={[
-                      styles.statusBadge,
-                      { backgroundColor: med.taken ? "green" : "red" },
-                    ]}
-                  >
-                    {med.taken ? "Taken" : "Pending"}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() =>
-                      handleDeleteMedicine(med.originalId, med.name)
-                    }
-                  >
-                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-              <Text style={styles.dosageText}>
-                {med.dosage} • {med.timeSlot}
-              </Text>
-              <Text style={styles.timeText}>🕒 {med.time}</Text>
+          // medications.map((med) => (
+          //   <View
+          //     key={med.id}
+          //     style={[
+          //       styles.medCard,
+          //       {
+          //         backgroundColor: med.taken ? "#E0F8E0" : "#F5F5F5",
+          //         borderColor: med.taken ? "green" : "#ccc",
+          //       },
+          //     ]}
+          //   >
+          //     <View style={styles.medHeader}>
+          //       <View style={styles.medInfo}>
+          //         <Text style={styles.medName}>{med.name}</Text>
+          //         <Text style={styles.timeSlotLabel}>{med.timeSlot} Dose</Text>
+          //       </View>
+          //       <View style={styles.headerRight}>
+          //         <Text
+          //           style={[
+          //             styles.statusBadge,
+          //             { backgroundColor: med.taken ? "green" : "red" },
+          //           ]}
+          //         >
+          //           {med.taken ? "Taken" : "Pending"}
+          //         </Text>
+          //         <TouchableOpacity
+          //           style={styles.deleteButton}
+          //           onPress={() =>
+          //             handleDeleteMedicine(med.originalId, med.name)
+          //           }
+          //         >
+          //           <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+          //         </TouchableOpacity>
+          //       </View>
+          //     </View>
+          //     <Text style={styles.dosageText}>
+          //       {med.dosage} • {med.timeSlot}
+          //     </Text>
+          //     <Text style={styles.timeText}>🕒 {med.time}</Text>
 
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.largeActionButton,
-                    { backgroundColor: med.taken ? "#6c757d" : "#1E1E2F" },
-                  ]}
-                  onPress={() => handleToggle(med.id)}
+          //     <View style={styles.actionRow}>
+          //       <TouchableOpacity
+          //         style={[
+          //           styles.largeActionButton,
+          //           { backgroundColor: med.taken ? "#6c757d" : "#1E1E2F" },
+          //         ]}
+          //         onPress={() => handleToggle(med.id)}
+          //       >
+          //         <Text style={styles.actionButtonText}>
+          //           {med.taken ? "Undo" : "Mark As Taken"}
+          //         </Text>
+          //       </TouchableOpacity>
+          //       <Switch
+          //         value={med.taken}
+          //         onValueChange={() => handleToggle(med.id)}
+          //         trackColor={{ false: "#767577", true: "#81b0ff" }}
+          //         thumbColor={med.taken ? "#f5dd4b" : "#f4f3f4"}
+          //       />
+          //     </View>
+          //   </View>
+          // ))
+          notis.map((noti) => (
+            <View
+              key={noti.NotificationID}
+              style={{
+                padding: 20,
+                backgroundColor: "white",
+                marginBottom: 10,
+                borderRadius: 10,
+                flexDirection: "row",
+                justifyContent: "space-between",
+              }}
+            >
+              <View style={{
+                width: "90%",
+              }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "bold",
+                  }}
                 >
-                  <Text style={styles.actionButtonText}>
-                    {med.taken ? "Undo" : "Mark As Taken"}
-                  </Text>
+                  {noti.NotificationName}
+                </Text>
+                <Text
+                  style={{
+                    marginTop: 10,
+                  }}
+                >
+                  Time: {noti.NotificationTime}
+                </Text>
+              </View>
+              <View>
+                <TouchableOpacity style={{
+                  padding: 10,
+                  borderRadius: 99,
+                }}
+                onPress={() => {
+                  deleteNoti(noti.NotificationID);
+                  fetchMeds();
+                }}
+                >
+                  <Ionicons name="trash-outline" size={20} color="red" />
                 </TouchableOpacity>
-                <Switch
-                  value={med.taken}
-                  onValueChange={() => handleToggle(med.id)}
-                  trackColor={{ false: "#767577", true: "#81b0ff" }}
-                  thumbColor={med.taken ? "#f5dd4b" : "#f4f3f4"}
-                />
               </View>
             </View>
           ))

@@ -46,7 +46,29 @@ const addNoti = async (name, time) => {
   }
 }
 
-export { createNotiTable, addNoti };
+const getAllNotifications = async () => {
+  try {
+    const notifications = await db.getAllAsync('SELECT * FROM Notification ORDER BY NotificationID DESC');
+    console.log('📋 Retrieved notifications:', notifications);
+    return notifications;
+  } catch (error) {
+    console.error('❌ Error fetching notifications:', error);
+    return [];
+  }
+};
+
+const deleteNoti = async (id) => {
+  try {
+    const result = await db.runAsync('DELETE FROM Notification WHERE NotificationID = ?', [id]);
+    console.log('💾 Delete result:', result);
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error deleting notification:', error);
+    return false;
+  }
+}
+
+export { createNotiTable, addNoti, getAllNotifications, deleteNoti };
 
 // ✅ Create Medicine table
 const createMedicineTable = () => {
@@ -280,6 +302,7 @@ export const initializeDatabase = () => {
   createMedicineTable();
   initDatabase();
   dietpage();
+  createNotiTable();
   console.log('✅ All tables initialized');
 };
 
