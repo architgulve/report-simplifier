@@ -30,82 +30,78 @@ export default function MedicationReminders() {
   const [loading, setLoading] = useState(true);
 
   const fetchMeds = async () => {
-  try {
-    setLoading(true);
-    await createMedicineTable();
-    const meds = await getAllMedicines();
+    try {
+      setLoading(true);
+      await createMedicineTable();
+      const meds = await getAllMedicines();
 
-    const formatted = [];
+      const formatted = [];
 
-    // Get saved taken statuses from storage
-    const storedTakenMapStr = await AsyncStorage.getItem("takenStatus");
-    const takenMap = storedTakenMapStr ? JSON.parse(storedTakenMapStr) : {};
+      // Get saved taken statuses from storage
+      const storedTakenMapStr = await AsyncStorage.getItem("takenStatus");
+      const takenMap = storedTakenMapStr ? JSON.parse(storedTakenMapStr) : {};
 
-    meds.forEach((med) => {
-      const times = med.TimeToBeTakenAt.split(",");
-      const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
+      meds.forEach((med) => {
+        const times = med.TimeToBeTakenAt.split(",");
+        const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
 
-      times.forEach((time, index) => {
-        const timeLabel =
-          index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
-        const medId = `${med.MedicineID}-${index}`;
-        if (time && time.trim()) {
-          formatted.push({
-            id: medId,
-            originalId: med.MedicineID,
-            name: med.MedicineName,
-            dosage: `${dosage}mg`,
-            time: time.trim(),
-            timeSlot: timeLabel,
-            taken: takenMap[medId] ?? false,
-            startDate: med.StartDate,
-            numberOfDays: med.NumberOfDays,
-          });
-        }
+        times.forEach((time, index) => {
+          const timeLabel =
+            index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
+          const medId = `${med.MedicineID}-${index}`;
+          if (time && time.trim()) {
+            formatted.push({
+              id: medId,
+              originalId: med.MedicineID,
+              name: med.MedicineName,
+              dosage: `${dosage}mg`,
+              time: time.trim(),
+              timeSlot: timeLabel,
+              taken: takenMap[medId] ?? false,
+              startDate: med.StartDate,
+              numberOfDays: med.NumberOfDays,
+            });
+          }
+        });
       });
-    });
 
-    formatted.sort((a, b) => a.time.localeCompare(b.time));
-    setMedications(formatted);
-  } catch (error) {
-    console.error("❌ Error fetching medications:", error);
-  } finally {
-    setLoading(false);
-  }
-};
-
+      formatted.sort((a, b) => a.time.localeCompare(b.time));
+      setMedications(formatted);
+    } catch (error) {
+      console.error("❌ Error fetching medications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Use useFocusEffect to refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      
       fetchMeds();
     }, [])
   );
 
   // Also fetch on component mount
   useEffect(() => {
-
     fetchMeds();
   }, []);
 
   const handleToggle = async (id) => {
-  const updatedMeds = medications.map((m) =>
-    m.id === id ? { ...m, taken: !m.taken } : m
-  );
-  setMedications(updatedMeds);
+    const updatedMeds = medications.map((m) =>
+      m.id === id ? { ...m, taken: !m.taken } : m
+    );
+    setMedications(updatedMeds);
 
-  try {
-    const takenMap = {};
-    updatedMeds.forEach((m) => {
-      takenMap[m.id] = m.taken;
-    });
-    await AsyncStorage.setItem("takenStatus", JSON.stringify(takenMap));
-  } catch (e) {
-    console.log("⚠️ Failed to save taken statuses", e);
-  }
-};
-
+    try {
+      const takenMap = {};
+      updatedMeds.forEach((m) => {
+        takenMap[m.id] = m.taken;
+      });
+      await AsyncStorage.setItem("takenStatus", JSON.stringify(takenMap));
+    } catch (e) {
+      console.log("⚠️ Failed to save taken statuses", e);
+    }
+  };
 
   const handleDeleteMedicine = (originalId, medicineName) => {
     Alert.alert(
@@ -177,140 +173,145 @@ export default function MedicationReminders() {
         {/* Title */}
         <Text style={styles.mainTitle}>Medication Reminders</Text>
         <Text style={styles.subtitle}>
-        Stay on track with your medication schedule
-      </Text>
+          Stay on track with your medication schedule
+        </Text>
 
-      {/* Summary Cards */}
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryCard}>
-          <Text style={[styles.summaryNumber, { color: "green" }]}>
-            {takenCount}
-          </Text>
-          <Text>Taken</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={[styles.summaryNumber, { color: "red" }]}>
-            {pendingCount}
-          </Text>
-          <Text>Pending</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={[styles.summaryNumber, { color: "blue" }]}>
-            {medications.length}
-          </Text>
-          <Text>Total</Text>
-        </View>
-      </View>
-
-      {/* Medication List */}
-      {medications.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="medical" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>No medications added yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Tap the button below to add your first medication
-          </Text>
-        </View>
-      ) : (
-        medications.map((med) => (
-          <View
-            key={med.id}
-            style={[
-              styles.medCard,
-              {
-                backgroundColor: med.taken ? "#E0F8E0" : "#F5F5F5",
-                borderColor: med.taken ? "green" : "#ccc",
-              },
-            ]}
-          >
-            <View style={styles.medHeader}>
-              <View style={styles.medInfo}>
-                <Text style={styles.medName}>{med.name}</Text>
-                <Text style={styles.timeSlotLabel}>{med.timeSlot} Dose</Text>
-              </View>
-              <View style={styles.headerRight}>
-                <Text
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: med.taken ? "green" : "red" },
-                  ]}
-                >
-                  {med.taken ? "Taken" : "Pending"}
-                </Text>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteMedicine(med.originalId, med.name)}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Text style={styles.dosageText}>
-              {med.dosage} • {med.timeSlot}
+        {/* Summary Cards */}
+        <View style={styles.summaryContainer}>
+          <View style={styles.summaryCard}>
+            <Text style={[styles.summaryNumber, { color: "green" }]}>
+              {takenCount}
             </Text>
-            <Text style={styles.timeText}>🕒 {med.time}</Text>
-
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[
-                  styles.largeActionButton,
-                  { backgroundColor: med.taken ? "#6c757d" : "#1E1E2F" },
-                ]}
-                onPress={() => handleToggle(med.id)}
-              >
-                <Text style={styles.actionButtonText}>
-                  {med.taken ? "Undo" : "Mark As Taken"}
-                </Text>
-              </TouchableOpacity>
-              <Switch
-                value={med.taken}
-                onValueChange={() => handleToggle(med.id)}
-                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                thumbColor={med.taken ? "#f5dd4b" : "#f4f3f4"}
-              />
-            </View>
+            <Text>Taken</Text>
           </View>
-        ))
-      )}
-
-      {/* Add Medication Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => router.push("/(medireminders)/addmedications")}
-      >
-        <Ionicons name="add-circle" size={20} color="#007AFF" />
-        <Text style={styles.addButtonText}>Add New Medication</Text>
-      </TouchableOpacity>
-
-      {/* Notification Settings */}
-      <View style={styles.notificationContainer}>
-        <Text style={styles.notificationTitle}>Notification Settings</Text>
-
-        <View style={styles.notificationRow}>
-          <Text style={styles.notificationLabel}>Push Notifications</Text>
-          <Switch
-            value={notifications.pushnotifications}
-            onValueChange={() => handleNotificationToggle("pushnotifications")}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-          />
+          <View style={styles.summaryCard}>
+            <Text style={[styles.summaryNumber, { color: "red" }]}>
+              {pendingCount}
+            </Text>
+            <Text>Pending</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <Text style={[styles.summaryNumber, { color: "blue" }]}>
+              {medications.length}
+            </Text>
+            <Text>Total</Text>
+          </View>
         </View>
 
-        <View style={styles.notificationRow}>
-          <Text style={styles.notificationLabel}>Voice Reminders</Text>
-          <Switch
-            value={notifications.voicereminders}
-            onValueChange={() => handleNotificationToggle("voicereminders")}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-          />
-        </View>
+        {/* Medication List */}
+        {medications.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="medical" size={64} color="#ccc" />
+            <Text style={styles.emptyStateText}>No medications added yet</Text>
+            <Text style={styles.emptyStateSubtext}>
+              Tap the button below to add your first medication
+            </Text>
+          </View>
+        ) : (
+          medications.map((med) => (
+            <View
+              key={med.id}
+              style={[
+                styles.medCard,
+                {
+                  backgroundColor: med.taken ? "#E0F8E0" : "#F5F5F5",
+                  borderColor: med.taken ? "green" : "#ccc",
+                },
+              ]}
+            >
+              <View style={styles.medHeader}>
+                <View style={styles.medInfo}>
+                  <Text style={styles.medName}>{med.name}</Text>
+                  <Text style={styles.timeSlotLabel}>{med.timeSlot} Dose</Text>
+                </View>
+                <View style={styles.headerRight}>
+                  <Text
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: med.taken ? "green" : "red" },
+                    ]}
+                  >
+                    {med.taken ? "Taken" : "Pending"}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() =>
+                      handleDeleteMedicine(med.originalId, med.name)
+                    }
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#FF3B30" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <Text style={styles.dosageText}>
+                {med.dosage} • {med.timeSlot}
+              </Text>
+              <Text style={styles.timeText}>🕒 {med.time}</Text>
 
-        <View style={styles.notificationRow}>
-          <Text style={styles.notificationLabel}>Snooze Options</Text>
-          <Switch
-            value={notifications.snooze}
-            onValueChange={() => handleNotificationToggle("snooze")}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-          />
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.largeActionButton,
+                    { backgroundColor: med.taken ? "#6c757d" : "#1E1E2F" },
+                  ]}
+                  onPress={() => handleToggle(med.id)}
+                >
+                  <Text style={styles.actionButtonText}>
+                    {med.taken ? "Undo" : "Mark As Taken"}
+                  </Text>
+                </TouchableOpacity>
+                <Switch
+                  value={med.taken}
+                  onValueChange={() => handleToggle(med.id)}
+                  trackColor={{ false: "#767577", true: "#81b0ff" }}
+                  thumbColor={med.taken ? "#f5dd4b" : "#f4f3f4"}
+                />
+              </View>
+            </View>
+          ))
+        )}
+
+        {/* Add Medication Button */}
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push("/(medireminders)/addmedications")}
+        >
+          <Ionicons name="add-circle" size={20} color="#007AFF" />
+          <Text style={styles.addButtonText}>Add New Medication</Text>
+        </TouchableOpacity>
+
+        {/* Notification Settings */}
+        <View style={styles.notificationContainer}>
+          <Text style={styles.notificationTitle}>Notification Settings</Text>
+
+          <View style={styles.notificationRow}>
+            <Text style={styles.notificationLabel}>Push Notifications</Text>
+            <Switch
+              value={notifications.pushnotifications}
+              onValueChange={() =>
+                handleNotificationToggle("pushnotifications")
+              }
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+            />
+          </View>
+
+          <View style={styles.notificationRow}>
+            <Text style={styles.notificationLabel}>Voice Reminders</Text>
+            <Switch
+              value={notifications.voicereminders}
+              onValueChange={() => handleNotificationToggle("voicereminders")}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+            />
+          </View>
+
+          <View style={styles.notificationRow}>
+            <Text style={styles.notificationLabel}>Snooze Options</Text>
+            <Switch
+              value={notifications.snooze}
+              onValueChange={() => handleNotificationToggle("snooze")}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+            />
+          </View>
         </View>
       </View>
     </ScrollView>

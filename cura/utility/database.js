@@ -15,6 +15,38 @@ export const getDatabaseStatus = async () => {
   }
 };
 
+const createNotiTable = () => {
+  try {
+    db.execAsync(`
+      CREATE TABLE IF NOT EXISTS Notification (
+        NotificationID INTEGER PRIMARY KEY AUTOINCREMENT,
+        NotificationName TEXT NOT NULL,
+        NotificationTime TEXT NOT NULL
+      );
+    `);
+    console.log('✅ Notification table created successfully');
+  } catch (error) {
+    console.error('❌ Error creating Notification table:', error);
+  }
+}
+
+const addNoti = async (name, time) => {
+  try {
+    const result = await db.runAsync(
+      `INSERT INTO Notification (NotificationName, NotificationTime)
+       VALUES (?, ?)`,
+      [name, time]
+    );
+    console.log('💾 Insert result:', result);
+    console.log('🆔 New notification ID:', result.lastInsertRowId);
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error adding notification:', error);
+    return false;
+  }
+}
+
+export { createNotiTable, addNoti };
 
 // ✅ Create Medicine table
 const createMedicineTable = () => {

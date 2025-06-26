@@ -1,5 +1,5 @@
 import { View, Text, StatusBar } from "react-native";
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "react-native";
 import Icon from "react-native-vector-icons/FontAwesome";
@@ -13,7 +13,7 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 import { useState } from "react";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
   initializeDatabase,
   insertSetting,
@@ -21,74 +21,74 @@ import {
 } from "../../utility/database";
 import HomeReminderPreview from "../../components/homepageremind";
 
-
 const Home = () => {
   const [userName, setUserName] = useState("Guest");
   const [isLoading, setIsLoading] = useState(true);
   const [previewMeds, setPreviewMeds] = useState([]);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      try {
-        initializeDatabase();
-        const settings = await getSettings();
+  useEffect(
+    useCallback(() => {
+      const loadUserData = async () => {
+        try {
+          initializeDatabase();
+          const settings = await getSettings();
 
-        if (settings && settings.name) {
-          setUserName(settings.name);
-        } else {
-          setUserName("Guest"); // Default fallback
-        }
-      } catch (error) {
-        console.log("Error loading user data:", error);
-        setUserName("Guest"); // Fallback on error
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-
-    loadUserData();
-
-    const fetchData = async () => {
-      await createMedicineTable();
-      const meds = await getAllMedicines();
-
-      const takenMapStr = await AsyncStorage.getItem("takenStatus");
-      const takenMap = takenMapStr ? JSON.parse(takenMapStr) : {};
-
-      const formatted = [];
-
-      meds.forEach((med) => {
-        const times = med.TimeToBeTakenAt.split(",");
-        const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
-
-        times.forEach((time, index) => {
-          const timeLabel =
-            index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
-          const medId = `${med.MedicineID}-${index}`;
-
-          if (time && time.trim()) {
-            formatted.push({
-              id: medId,
-              name: med.MedicineName,
-              time: time.trim(),
-              timeSlot: timeLabel,
-              taken: takenMap[medId] ?? false,
-            });
+          if (settings && settings.name) {
+            setUserName(settings.name);
+          } else {
+            setUserName("Guest"); // Default fallback
           }
+        } catch (error) {
+          console.log("Error loading user data:", error);
+          setUserName("Guest"); // Fallback on error
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadUserData();
+
+      const fetchData = async () => {
+        await createMedicineTable();
+        const meds = await getAllMedicines();
+
+        const takenMapStr = await AsyncStorage.getItem("takenStatus");
+        const takenMap = takenMapStr ? JSON.parse(takenMapStr) : {};
+
+        const formatted = [];
+
+        meds.forEach((med) => {
+          const times = med.TimeToBeTakenAt.split(",");
+          const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
+
+          times.forEach((time, index) => {
+            const timeLabel =
+              index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
+            const medId = `${med.MedicineID}-${index}`;
+
+            if (time && time.trim()) {
+              formatted.push({
+                id: medId,
+                name: med.MedicineName,
+                time: time.trim(),
+                timeSlot: timeLabel,
+                taken: takenMap[medId] ?? false,
+              });
+            }
+          });
         });
-      });
 
-      formatted.sort((a, b) => a.time.localeCompare(b.time));
-      setPreviewMeds(formatted.slice(0, 2)); // Show only first 2
-    };
+        formatted.sort((a, b) => a.time.localeCompare(b.time));
+        setPreviewMeds(formatted.slice(0, 2)); // Show only first 2
+      };
 
-    fetchData();
-  }, []);
+      fetchData();
+    })
+  );
 
   const getGreeting = () => {
-    const name = userName || 'Guest';
-    
+    const name = userName || "Guest";
+
     if (hours < 12) {
       return `Good Morning, ${name}!`;
     } else if (hours < 18) {
@@ -114,7 +114,6 @@ const Home = () => {
     }),
   }));
 
-  
   return (
     <SafeAreaView
       edges={["top"]}
@@ -182,15 +181,15 @@ const Home = () => {
               }}
             >
               <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "600",
-                color: "#333",
-                textAlign: "center",
-              }}
-            >
-              {isLoading ? "Loading..." : getGreeting()}
-            </Text>
+                style={{
+                  fontSize: 24,
+                  fontWeight: "600",
+                  color: "#333",
+                  textAlign: "center",
+                }}
+              >
+                {isLoading ? "Loading..." : getGreeting()}
+              </Text>
               <Text stle={{ fontSize: 16, lineHeight: 30 }}>
                 Let's keep track of your Health today
               </Text>
@@ -265,7 +264,7 @@ const Home = () => {
                 </View>
               </View>
             </View>
-          <HomeReminderPreview/>
+            <HomeReminderPreview />
             <View
               style={{
                 widht: "100%",
@@ -329,7 +328,7 @@ const Home = () => {
               <>
                 <Animated.View style={[{ gap: 16 }, optionsStyle]}>
                   <TouchableOpacity
-                    onPress={() => router.push("/scan")}
+                    onPress={() => router.push("/(scanupload)/confirmation")}
                     style={
                       {
                         // backgroundColor: "white",
@@ -363,8 +362,7 @@ const Home = () => {
                         // backgroundColor: "white",
                       }
                     }
-                    onPress={() => router.push("/upload")}
-                    
+                    onPress={() => router.push("/(scanupload)/upload")}
                   >
                     <View
                       style={{

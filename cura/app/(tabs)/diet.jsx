@@ -9,10 +9,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Pressable, useState } from "react";
+import { useState } from "react";
+import { Pressable } from "react-native";
 import { useEffect } from "react";
 import LottieView from "lottie-react-native";
-import { useState,useEffect } from "react";
+// import { useState,useEffect } from "react";
 import { 
   initializeDatabase, 
   insertSetting, 

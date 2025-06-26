@@ -21,7 +21,7 @@ const RootLayout = () => {
       <Stack.Screen name='index' options={{ headerShown: false }} />
       <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
       <Stack.Screen name='settings' options={{ headerShown: false }} />
-      <Stack.Screen name='scan' options={{ headerShown: false }} />
+      <Stack.Screen name='(scanupload)' options={{ headerShown: false }} />
     </Stack>
   )
 }
