@@ -47,7 +47,7 @@ const Scanner = () => {
     });
 
     try {
-      const res = await axios.post("http://192.168.1.201:8000/ocr/", formData, {
+      const res = await axios.post("http://<your-ip-address>:8000/ocr/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

@@ -148,8 +148,8 @@ export default function MedicationReminders() {
     );
   };
 
-  const takenCount = medications.filter((m) => m.taken).length;
-  const pendingCount = medications.length - takenCount;
+  const takenCount = notis.filter((m) => m.taken).length;
+  const pendingCount = notis.length - takenCount;
 
   const handleNotificationToggle = (key) => {
     setNotifications((prev) => ({
@@ -196,7 +196,7 @@ export default function MedicationReminders() {
           </View>
           <View style={styles.summaryCard}>
             <Text style={[styles.summaryNumber, { color: "blue" }]}>
-              {medications.length}
+              {notis.length}
             </Text>
             <Text>Total</Text>
           </View>

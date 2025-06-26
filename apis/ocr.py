@@ -38,17 +38,16 @@ You are a medical assistant. Here is a medical discharge report:
 {extracted_text}
 
 1. Extract only medicine-related instructions and return them as a valid JSON array strictly in this format, Do not add any extra information in the JSON other than what is told.
-The medicine field should only contain the name of the medicine
-The dosage field should only contain a number with a unit of measurement regarding medicine quantity
-The morning, afternoon, and evening fields should only contain true or false::
+The name field should only contain the content of the notification
+The time field should only contain the time of day when the notification is to be sent(morning, afternoon, evening).
+If a singel medicaine has multiplae times of day then break it down into multiple notifications.
+If there is no specific time that you can find assume it to be afternoon.
+This data will be used to generate reminders for the user.
 
 [
   {{
-    "medicine": "Paracetamol",
-    "dosage": "500mg",
-    "morning": true,
-    "afternoon": false,
-    "evening": true
+    "name": "Take 56mg Paracetamol",
+    "time": "evening",
   }},
   ...
 ]
