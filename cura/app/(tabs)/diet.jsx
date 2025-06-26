@@ -9,9 +9,17 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useState } from "react";
+import { Pressable, useState } from "react";
 import { useEffect } from "react";
 import LottieView from "lottie-react-native";
+import { useState,useEffect } from "react";
+import { 
+  initializeDatabase, 
+  insertSetting, 
+  getSettings,
+  insertDiet,
+  getLatestDiet 
+} from '../../utility/database';
 
 const ProgressItem = ({ label, value, max, unit }) => {
   const percentage = (value / max) * 100;
@@ -29,7 +37,9 @@ const ProgressItem = ({ label, value, max, unit }) => {
   );
 };
 
-const MealCard = ({ title, time, status, calories, items, isPending }) => {
+const MealCard = ({ title, time, status: initialStatus, calories, items, isPending }) => {
+  const [status, setStatus] = useState(initialStatus);
+
   return (
     <View
       style={[
@@ -66,11 +76,27 @@ const MealCard = ({ title, time, status, calories, items, isPending }) => {
           </Text>
         ))}
       </View>
-      {isPending && (
-        <View style={styles.actionButtonWrapper}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>✔ Mark As Taken</Text>
-          </TouchableOpacity>
+
+      {/* Button */}
+      {isPending && status !== "Completed" && (
+        <View style={{ marginTop: 10, alignItems: "center" }}>
+          <Pressable
+            style={{
+              backgroundColor: "#fff",
+              padding: 8,
+              borderRadius: 8,
+              width: "90%",
+              alignItems: "center",
+              borderWidth: 1,
+              borderColor: "#ccc",
+            }}
+            onPress={() => {
+              console.log(`${title} marked as taken`);
+              setStatus("Completed"); // ✅ triggers re-render
+            }}
+          >
+            <Text style={{ fontWeight: "bold" }}>✔ Mark As Taken</Text>
+          </Pressable>
         </View>
       )}
     </View>
@@ -100,6 +126,11 @@ const DietPlan = () => {
   useEffect(() => {
     loadDiet();
   }, []);
+
+
+  useEffect(() => {
+  initializeDatabase();
+}, []);
 
   return (
     <SafeAreaView style={styles.container}>

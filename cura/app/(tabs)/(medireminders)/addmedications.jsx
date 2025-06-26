@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, Alert, ScrollView
+} from 'react-native';
 import RNPickerSelect from 'react-native-picker-select';
 import { Ionicons } from '@expo/vector-icons';
+import { insertMedicine } from '../../../utility/database';
+import { router } from 'expo-router';
 
 // Generate 24-hour time slots with 15-minute intervals
 const generateTimeSlots = () => {
@@ -10,7 +15,10 @@ const generateTimeSlots = () => {
     for (let min = 0; min < 60; min += 15) {
       const formattedHour = hour.toString().padStart(2, '0');
       const formattedMin = min.toString().padStart(2, '0');
-      times.push({ label: `${formattedHour}:${formattedMin}`, value: `${formattedHour}:${formattedMin}` });
+      times.push({
+        label: `${formattedHour}:${formattedMin}`,
+        value: `${formattedHour}:${formattedMin}`
+      });
     }
   }
   return times;
@@ -25,51 +33,88 @@ export default function AddMedication() {
 
   const timeSlots = generateTimeSlots();
 
-  const handleAddMedication = () => {
+  const handleAddMedication = async () => {
     if (name && dosage && morningTime && afternoonTime && nightTime) {
-      Alert.alert(
-        'Medication Added',
-        `Name: ${name}\nDosage: ${dosage} mg/day\nTimes:\nMorning: ${morningTime}\nAfternoon: ${afternoonTime}\nNight: ${nightTime}`
-      );
-      setName('');
-      setDosage('');
-      setMorningTime('');
-      setAfternoonTime('');
-      setNightTime('');
+      try {
+        const timeString = `${morningTime},${afternoonTime},${nightTime}`;
+        console.log('📝 Adding medication:', {
+          name,
+          dosage: parseInt(dosage),
+          timeString,
+        });
+        
+        // Fixed: Pass parameters in correct order matching database function
+        const success = await insertMedicine(
+          name,                    // MedicineName
+          0,                      // QuantityLiquid
+          parseInt(dosage),       // QuantityTablet
+          1,                      // NumberOfDays
+          timeString,             // TimeToBeTakenAt
+          new Date().toISOString().split('T')[0] // StartDate
+        );
+
+        console.log('💾 Insert result:', success);
+
+        if (success) {
+          Alert.alert(
+            'Success', 
+            'Medication added successfully!',
+            [
+              {
+                text: 'OK',
+                onPress: () => {
+                  // Clear form
+                  setName('');
+                  setDosage('');
+                  setMorningTime('');
+                  setAfternoonTime('');
+                  setNightTime('');
+                  router.back();
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', 'Failed to add medication. Please try again.');
+        }
+      } catch (error) {
+        console.error('❌ Error in handleAddMedication:', error);
+        Alert.alert('Error', 'An error occurred while adding the medication.');
+      }
     } else {
-      Alert.alert('Error', 'Please fill all fields');
+      Alert.alert('Missing Information', 'Please fill in all fields before adding the medication.');
     }
   };
 
-  const dropdownIcon = () => {
-    return <Ionicons name="chevron-down" size={24} color="gray" />;
-  };
+  const dropdownIcon = () => (
+    <Ionicons name="chevron-down" size={24} color="gray" />
+  );
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.heading}>Add a New Medication</Text>
 
-      <Text style={styles.label}>Name</Text>
+      <Text style={styles.label}>Medication Name *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Medication"
+        placeholder="Enter medication name"
         value={name}
         onChangeText={setName}
       />
 
-      <Text style={styles.label}>Dosage (mg/day)</Text>
+      <Text style={styles.label}>Dosage (mg per dose) *</Text>
       <TextInput
         style={styles.input}
-        placeholder="Dosage in mg/day"
+        placeholder="Enter dosage in mg"
         keyboardType="numeric"
         value={dosage}
         onChangeText={setDosage}
       />
 
-      <Text style={styles.label}>Morning Time</Text>
+      <Text style={styles.label}>Morning Time *</Text>
       <View style={styles.pickerBox}>
         <RNPickerSelect
-          onValueChange={(value) => setMorningTime(value)}
+          onValueChange={setMorningTime}
           items={timeSlots}
           placeholder={{ label: 'Select Morning Time', value: '' }}
           style={pickerSelectStyles}
@@ -78,10 +123,10 @@ export default function AddMedication() {
         />
       </View>
 
-      <Text style={styles.label}>Afternoon Time</Text>
+      <Text style={styles.label}>Afternoon Time *</Text>
       <View style={styles.pickerBox}>
         <RNPickerSelect
-          onValueChange={(value) => setAfternoonTime(value)}
+          onValueChange={setAfternoonTime}
           items={timeSlots}
           placeholder={{ label: 'Select Afternoon Time', value: '' }}
           style={pickerSelectStyles}
@@ -90,10 +135,10 @@ export default function AddMedication() {
         />
       </View>
 
-      <Text style={styles.label}>Night Time</Text>
+      <Text style={styles.label}>Night Time *</Text>
       <View style={styles.pickerBox}>
         <RNPickerSelect
-          onValueChange={(value) => setNightTime(value)}
+          onValueChange={setNightTime}
           items={timeSlots}
           placeholder={{ label: 'Select Night Time', value: '' }}
           style={pickerSelectStyles}
@@ -127,13 +172,16 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginBottom: 5,
     color: '#000',
+    fontWeight: '600',
   },
   input: {
     backgroundColor: '#fff',
-    padding: 10,
+    padding: 12,
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   pickerBox: {
     backgroundColor: '#fff',
@@ -142,6 +190,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     paddingVertical: 3,
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   button: {
     backgroundColor: '#2196f3',
@@ -149,6 +199,11 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 20,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   buttonText: {
     color: '#fff',
@@ -163,14 +218,14 @@ const pickerSelectStyles = {
     paddingVertical: 12,
     paddingHorizontal: 10,
     color: 'black',
-    paddingRight: 30, // To ensure the text doesn't overlap with the icon
+    paddingRight: 30,
   },
   inputAndroid: {
     fontSize: 16,
     paddingVertical: 12,
     paddingHorizontal: 10,
     color: 'black',
-    paddingRight: 30, // To ensure the text doesn't overlap with the icon
+    paddingRight: 30,
   },
   iconContainer: {
     top: 15,

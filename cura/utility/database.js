@@ -1,48 +1,254 @@
-import SQLite from 'react-native-sqlite-storage';
-const db = SQLite.openDatabase(
-  { name: 'MedicineDatabase.db', location: 'default' },
-  () => { console.log('Database opened'); },
-  error => { console.log('Error: ', error); }
-);
-db.transaction(tx => {
-  tx.executeSql(
-    `CREATE TABLE IF NOT EXISTS Medicine (
-      MedicineID INTEGER PRIMARY KEY AUTOINCREMENT,
-      MedicineName TEXT NOT NULL,
-      QuantityLiquid INTEGER DEFAULT 0,
-      QuantityTablet INTEGER DEFAULT 0,
-      NumberOfDays INTEGER NOT NULL,
-      TimeToBeTakenAt TEXT NOT NULL,
-      StartDate DATE NOT NULL
-    );`
-  );
-});
-const insertMedicine = (name, quantityLiquid, quantityTablet, numberOfDays, timeToBeTakenAt, startDate) => {
-  db.transaction(tx => {
-    tx.executeSql(
-      `INSERT INTO Medicine (MedicineName, QuantityLiquid, QuantityTablet, NumberOfDays, TimeToBeTakenAt, StartDate)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, quantityLiquid, quantityTablet, numberOfDays, timeToBeTakenAt, startDate],
-      (tx, results) => {
-        if (results.rowsAffected > 0) {
-          console.log('Medicine inserted successfully');
-        } else {
-          console.log('Insertion failed');
-        }
-      }
-    );
-  });
-};
-const getAllMedicines = () => {
-  db.transaction(tx => {
-    tx.executeSql('SELECT * FROM Medicine', [], (tx, results) => {
-      let medicines = [];
-      for (let i = 0; i < results.rows.length; i++) {
-        medicines.push(results.rows.item(i));
-      }
-      console.log(medicines);
-    });
-  });
+// utility/database.js
+import * as SQLite from 'expo-sqlite';
+
+const db = SQLite.openDatabaseSync('cura.db');
+
+// ✅ Debug utility: check which tables exist
+export const getDatabaseStatus = async () => {
+  try {
+    const result = await db.getAllAsync(`SELECT name FROM sqlite_master WHERE type='table';`);
+    console.log('✅ Database tables:', result);
+    return result;
+  } catch (error) {
+    console.error('❌ Error fetching database status:', error);
+    return [];
+  }
 };
 
-export { insertMedicine, getAllMedicines };
+
+// ✅ Create Medicine table
+const createMedicineTable = () => {
+  try {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS Medicine (
+        MedicineID INTEGER PRIMARY KEY AUTOINCREMENT,
+        MedicineName TEXT NOT NULL,
+        QuantityLiquid INTEGER DEFAULT 0,
+        QuantityTablet INTEGER DEFAULT 0,
+        NumberOfDays INTEGER NOT NULL,
+        TimeToBeTakenAt TEXT NOT NULL,
+        StartDate DATE NOT NULL
+      );
+    `);
+    console.log('✅ Medicine table created successfully');
+    return true;
+  } catch (error) {
+    console.error('❌ Error creating Medicine table:', error);
+    return false;
+  }
+};
+
+// ✅ Insert Medicine
+const insertMedicine = async (name, quantityLiquid, quantityTablet, numberOfDays, timeToBeTakenAt, startDate) => {
+  try {
+    console.log('📝 Inserting medicine with data:', {
+      name,
+      quantityLiquid,
+      quantityTablet,
+      numberOfDays,
+      timeToBeTakenAt,
+      startDate
+    });
+
+    const result = await db.runAsync(
+      `INSERT INTO Medicine (MedicineName, QuantityLiquid, QuantityTablet, NumberOfDays, TimeToBeTakenAt, StartDate)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [name, quantityLiquid, quantityTablet, numberOfDays, timeToBeTakenAt, startDate]
+    );
+    
+    console.log('💾 Insert result:', result);
+    console.log('🆔 New medicine ID:', result.lastInsertRowId);
+    
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error inserting medicine:', error);
+    return false;
+  }
+};
+
+// ✅ Get All Medicines
+const getAllMedicines = async () => {
+  try {
+    const medicines = await db.getAllAsync('SELECT * FROM Medicine ORDER BY MedicineID DESC');
+    console.log('📋 Retrieved medicines:', medicines);
+    return medicines;
+  } catch (error) {
+    console.error('❌ Error fetching medicines:', error);
+    return [];
+  }
+};
+
+// ✅ Get Medicine by ID
+const getMedicineById = async (id) => {
+  try {
+    const medicine = await db.getFirstAsync('SELECT * FROM Medicine WHERE MedicineID = ?', [id]);
+    return medicine;
+  } catch (error) {
+    console.error('❌ Error fetching medicine by ID:', error);
+    return null;
+  }
+};
+
+// ✅ Update Medicine
+const updateMedicine = async (id, name, quantityLiquid, quantityTablet, numberOfDays, timeToBeTakenAt, startDate) => {
+  try {
+    const result = await db.runAsync(
+      `UPDATE Medicine 
+       SET MedicineName = ?, QuantityLiquid = ?, QuantityTablet = ?, 
+           NumberOfDays = ?, TimeToBeTakenAt = ?, StartDate = ?
+       WHERE MedicineID = ?`,
+      [name, quantityLiquid, quantityTablet, numberOfDays, timeToBeTakenAt, startDate, id]
+    );
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error updating medicine:', error);
+    return false;
+  }
+};
+
+// ✅ Delete Medicine
+const deleteMedicine = async (id) => {
+  try {
+    const result = await db.runAsync('DELETE FROM Medicine WHERE MedicineID = ?', [id]);
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error deleting medicine:', error);
+    return false;
+  }
+};
+
+// ✅ Debug: Show all medicines in console
+const debugShowAllMedicines = async () => {
+  try {
+    const medicines = await getAllMedicines();
+    console.log('🔍 DEBUG - All medicines in database:');
+    medicines.forEach((med, index) => {
+      console.log(`${index + 1}. ID: ${med.MedicineID}, Name: ${med.MedicineName}, Times: ${med.TimeToBeTakenAt}`);
+    });
+    return medicines;
+  } catch (error) {
+    console.error('❌ Debug error:', error);
+    return [];
+  }
+};
+
+export {
+  createMedicineTable,
+  insertMedicine,
+  getAllMedicines,
+  getMedicineById,
+  updateMedicine,
+  deleteMedicine,
+  debugShowAllMedicines
+};
+
+export const initDatabase = () => {
+  try {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        age TEXT NOT NULL,
+        language TEXT NOT NULL,
+        bloodgroup TEXT NOT NULL,
+        emergencyContact TEXT NOT NULL,
+        primaryDoctor TEXT NOT NULL
+      );
+    `);
+    console.log('✅ Settings table created successfully');
+  } catch (error) {
+    console.error('❌ Error creating settings table:', error);
+  }
+};
+
+export const insertSetting = async (name, age, language, bloodgroup, emergencyContact, primaryDoctor) => {
+  try {
+    const result = await db.runAsync(
+      `INSERT OR REPLACE INTO settings (name, age, language, bloodgroup, emergencyContact, primaryDoctor) VALUES (?, ?, ?, ?, ?, ?);`,
+      [name, age, language, bloodgroup, emergencyContact, primaryDoctor]
+    );
+    return true;
+  } catch (error) {
+    console.error('❌ Error inserting setting:', error);
+    return false;
+  }
+};
+
+export const getSettings = async () => {
+  try {
+    return await db.getFirstAsync(`SELECT * FROM settings LIMIT 1;`);
+  } catch (error) {
+    console.error('❌ Error fetching settings:', error);
+    return null;
+  }
+};
+
+export const clearSettings = async () => {
+  try {
+    await db.runAsync(`DELETE FROM settings;`);
+    return true;
+  } catch (error) {
+    console.error('❌ Error clearing settings:', error);
+    return false;
+  }
+};
+
+export const dietpage = () => {
+  try {
+    db.execSync(`
+      CREATE TABLE IF NOT EXISTS diet (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        calories INTEGER NOT NULL,
+        protein INTEGER NOT NULL,
+        water INTEGER NOT NULL,
+        breakfast TEXT NOT NULL,
+        lunch TEXT NOT NULL,
+        dinner TEXT NOT NULL,
+        description TEXT NOT NULL
+      );
+    `);
+    console.log('✅ Diet table created successfully');
+  } catch (error) {
+    console.error('❌ Error creating diet table:', error);
+  }
+};
+
+export const insertDiet = async (calories, protein, water, breakfast, lunch, dinner, description) => {
+  try {
+    const result = await db.runAsync(
+      `INSERT INTO diet (calories, protein, water, breakfast, lunch, dinner, description) VALUES (?, ?, ?, ?, ?, ?, ?);`,
+      [calories, protein, water, breakfast, lunch, dinner, description]
+    );
+    return true;
+  } catch (error) {
+    console.error('❌ Error inserting diet:', error);
+    return false;
+  }
+};
+
+export const getLatestDiet = async () => {
+  try {
+    return await db.getFirstAsync(`SELECT * FROM diet ORDER BY id DESC LIMIT 1;`);
+  } catch (error) {
+    console.error('❌ Error fetching latest diet:', error);
+    return null;
+  }
+};
+
+export const getAllDiets = async () => {
+  try {
+    return await db.getAllAsync(`SELECT * FROM diet ORDER BY id DESC;`);
+  } catch (error) {
+    console.error('❌ Error fetching diets:', error);
+    return [];
+  }
+};
+
+export const initializeDatabase = () => {
+  createMedicineTable();
+  initDatabase();
+  dietpage();
+  console.log('✅ All tables initialized');
+};
+
+
