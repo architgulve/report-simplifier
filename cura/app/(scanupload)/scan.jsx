@@ -23,8 +23,8 @@ const Scanner = () => {
     MediaLibrary.usePermissions();
   const windowWidth = Dimensions.get("window").width;
   const initialDietRef = useRef("");
-  const [loading, setLoading] = useState(false); // ✅ For full-screen overlay
-  const [diet, setDiet] = useState(""); // ✅ To track when data comes
+  const [loading, setLoading] = useState(false);
+  const [diet, setDiet] = useState(""); 
 
   const resizeImage = async (uri) => {
     const result = await ImageManipulator.manipulateAsync(
@@ -47,7 +47,7 @@ const Scanner = () => {
     });
 
     try {
-      const res = await axios.post("http://<your-ip-address>:8000/ocr/", formData, {
+      const res = await axios.post("http://<IP address>:8000/ocr/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
@@ -124,7 +124,7 @@ const Scanner = () => {
   useEffect(() => {
     if (diet.trim() && diet !== initialDietRef.current) {
       setLoading(false);
-      router.push("/confirmation"); // only navigates if changed
+      router.push("/confirmation");
     }
   }, [diet]);
 
@@ -211,7 +211,6 @@ const Scanner = () => {
             <CameraView
               ref={cameraRef}
               style={{
-                // position: "absolute",
                 width: "100%",
                 height: "100%",
                 zIndex: 1,
@@ -221,27 +220,15 @@ const Scanner = () => {
               facing="back"
               onCameraReady={() => setIsCameraReady(true)}
             >
-              {/* <View
-              style={{
-                // position: "absolute",
-                width: "100%",
-                height: "100%",
-                zIndex: 1,
-                alignContent: "flex-end",
-                justifyContent: "flex-start",
-              }}
-            > */}
               <View
                 style={{
                   backgroundColor: "#DFF6FB",
                   height: "30%",
                   widhth: "30%",
-                  // alignSelf: "flex-end",
                   transformOrigin: "top",
                   transform: [{ translateX: "90%" }, { rotate: "45deg" }],
                 }}
               ></View>
-              {/* </View> */}
             </CameraView>
           </View>
 
@@ -313,7 +300,7 @@ const Scanner = () => {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={openGallery}>
+            <TouchableOpacity onPress={() => {router.push("/upload")}}>
               <View
                 style={{
                   width: 0.2 * windowWidth,
@@ -372,7 +359,6 @@ const Scanner = () => {
             style={{
               height: "100%",
               width: "100%",
-              // backgroundColor: "black",
             }}
           />
         </View>

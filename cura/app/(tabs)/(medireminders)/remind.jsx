@@ -1,4 +1,3 @@
-// Modified: MedicationReminders with properly timed local notifications
 import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -37,7 +36,7 @@ const scheduleNotification = async (title, body, hour, minute) => {
   scheduledTime.setSeconds(0);
 
   if (scheduledTime <= now) {
-    scheduledTime.setDate(scheduledTime.getDate() + 1); // next day
+    scheduledTime.setDate(scheduledTime.getDate() + 1);
   }
 
   const trigger = scheduledTime.getTime() - now.getTime();
@@ -48,7 +47,7 @@ const scheduleNotification = async (title, body, hour, minute) => {
       body,
       sound: true,
     },
-    
+
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
       seconds: Math.floor(trigger / 1000),
@@ -73,19 +72,20 @@ export default function MedicationReminders() {
   const currentTime = now.toTimeString().slice(0, 5);
 
   const fetchMealTimes = async () => {
-    const tempMorning = await AsyncStorage.getItem("morningTime");
-    const tempAfternoon = await AsyncStorage.getItem("afternoonTime");
-    const tempNight = await AsyncStorage.getItem("nightTime");
-    setMorningTime(tempMorning || "09:00");
-    setAfternoonTime(tempAfternoon || "13:00");
-    setNightTime(tempNight || "20:00");
+    const tempMorning = (await AsyncStorage.getItem("morningTime")) || "09:00";
+    const tempAfternoon =
+      (await AsyncStorage.getItem("afternoonTime")) || "13:00";
+    const tempNight = (await AsyncStorage.getItem("nightTime")) || "20:00";
+    setMorningTime(tempMorning);
+    setAfternoonTime(tempAfternoon);
+    setNightTime(tempNight);
+    return { morning: tempMorning, afternoon: tempAfternoon, night: tempNight };
   };
 
-  const fetchMeds = async () => {
+  const fetchMeds = async ({ morning, afternoon, night }) => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
     try {
       setLoading(true);
-      // await Notifications.cancelAllScheduledNotificationsAsync();
-
       const noti = await getAllNotifications();
       setNotis(noti);
 
@@ -94,14 +94,14 @@ export default function MedicationReminders() {
 
       for (const n of noti) {
         let time = "";
-        if (n.NotificationTime === "morning") time = morningTime;
-        else if (n.NotificationTime === "afternoon") time = afternoonTime;
-        else time = nightTime;
-       
+        if (n.NotificationTime === "morning") time = morning;
+        else if (n.NotificationTime === "afternoon") time = afternoon;
+        else time = night;
+
         const { hour, minute } = parseTime(time);
         const title = `Time to take ${n.NotificationName}`;
         const body = `Reminder to take your medicine.`;
-        console.log("⏰ Scheduling notification:", title, "at", hour, minute);
+        console.log(title, body, hour, minute);
         await scheduleNotification(title, body, hour, minute);
       }
     } catch (error) {
@@ -110,18 +110,17 @@ export default function MedicationReminders() {
       setLoading(false);
     }
   };
-  useEffect(() => {
-    fetchMeds();
-    fetchMealTimes();
-  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      fetchMeds();
-      fetchMealTimes();
+      const fetchAll = async () => {
+        const times = await fetchMealTimes();
+        await fetchMeds(times);
+      };
+
+      fetchAll();
     }, [])
   );
-
 
   if (loading) {
     return (
@@ -240,7 +239,12 @@ export default function MedicationReminders() {
                     style={{ padding: 10, borderRadius: 99 }}
                     onPress={() => {
                       deleteNoti(noti.NotificationID);
-                      fetchMeds();
+                      const fetchAll = async () => {
+                        const times = await fetchMealTimes();
+                        await fetchMeds(times);
+                      };
+                
+                      fetchAll();
                     }}
                   >
                     <Ionicons name="trash-outline" size={20} color="red" />
@@ -250,7 +254,7 @@ export default function MedicationReminders() {
             })
           )}
         </View>
-        <TouchableOpacity
+        {/* <TouchableOpacity
           style={styles.addButton}
           onPress={() =>
             scheduleNotification(
@@ -262,13 +266,11 @@ export default function MedicationReminders() {
           }
         >
           <Text style={styles.addButtonText}>Send Test Notification</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </ScrollView>
     </SafeAreaView>
   );
 }
-
-// (StyleSheet remains unchanged) [RETAIN YOUR EXISTING STYLES BELOW THIS LINE] ↓
 
 const styles = StyleSheet.create({
   container: {

@@ -1,151 +1,195 @@
-import React, { useState } from "react";
-import { View, Text, Button, Alert, Platform } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, TouchableOpacity, Dimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as FileSystem from "expo-file-system";
-import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
+import * as MediaLibrary from "expo-media-library";
+import * as ImageManipulator from "expo-image-manipulator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import LottieView from "lottie-react-native";
+import axios from "axios";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
 const Upload = () => {
-  const [storedPath, setStoredPath] = useState(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [mediaPermission, requestMediaPermission] =
+    MediaLibrary.usePermissions();
+  const initialDietRef = useRef("");
+  const [diet, setDiet] = useState("");
+  const windowWidth = Dimensions.get("window").width;
 
-  const pickAndStoreDocument = async () => {
-    setIsUploading(true);
+  const resizeImage = async (uri) => {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1000 } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  };
+
+  const uploadImageToBackend = async (uri) => {
+    setLoading(true);
+    const resizedUri = await resizeImage(uri);
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: resizedUri,
+      type: "image/jpeg",
+      name: "photo.jpg",
+    });
+
     try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: "*/*",
-        copyToCacheDirectory: false, // Try false first
+      const res = await axios.post("http://<IP address>:8000/ocr/", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      console.log("DocumentPicker result:", result);
+      const responseText = res.data.text;
+      const startIndex = responseText.indexOf("[");
+      const endIndex = responseText.indexOf("]") + 1;
+      const jsonPart = responseText.slice(startIndex, endIndex);
+      const dietPart = responseText.slice(endIndex).trim();
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const asset = result.assets[0];
-        const fileName = asset.name;
-        const sourceUri = asset.uri;
-
-        // Ensure document directory exists
-        const docDir = FileSystem.documentDirectory;
-        const dirInfo = await FileSystem.getInfoAsync(docDir);
-
-        if (!dirInfo.exists) {
-          await FileSystem.makeDirectoryAsync(docDir, { intermediates: true });
-        }
-
-        // Create unique filename
-        const timestamp = Date.now();
-        const newPath = `${docDir}${timestamp}_${fileName}`;
-
-        console.log("Source URI:", sourceUri);
-        console.log("Destination path:", newPath);
-
-        // Check if source file exists and is readable
-        const sourceInfo = await FileSystem.getInfoAsync(sourceUri);
-        console.log("Source file info:", sourceInfo);
-
-        if (!sourceInfo.exists) {
-          throw new Error("Source file does not exist or is not accessible");
-        }
-
-        // Copy the file
-        await FileSystem.copyAsync({
-          from: sourceUri,
-          to: newPath,
-        });
-
-        // Verify the copy was successful
-        const copiedFileInfo = await FileSystem.getInfoAsync(newPath);
-        console.log("Copied file info:", copiedFileInfo);
-
-        if (copiedFileInfo.exists) {
-          console.log("✅ Document successfully stored at:", newPath);
-          setStoredPath(newPath);
-          Alert.alert("Success", "Document saved successfully!");
-        } else {
-          throw new Error("File copy verification failed");
-        }
-      } else {
-        console.log("Document selection cancelled");
+      let medicineData = [];
+      try {
+        medicineData = JSON.parse(jsonPart);
+      } catch (e) {
+        console.error("Failed to parse medicine JSON:", e, jsonPart);
       }
-    } catch (error) {
-      console.error("❌ Error storing document:", error);
-      Alert.alert("Error", `Failed to store the document: ${error.message}`);
-    } finally {
-      setIsUploading(false);
+
+      const dietText = dietPart.startsWith("Diet Recommendation:")
+        ? dietPart
+        : "Diet Recommendation:\n" + dietPart;
+
+      await AsyncStorage.setItem("dietRecommendation", dietText);
+      await AsyncStorage.setItem("medicineData", JSON.stringify(medicineData));
+      setDiet(dietText);
+      router.push("/confirmation");
+    } catch (err) {
+      console.error("Upload error:", err);
     }
   };
 
-  const testFileSystemAccess = async () => {
-    try {
-      const testPath = `${FileSystem.documentDirectory}test.txt`;
-      await FileSystem.writeAsStringAsync(testPath, "test content");
-      const testInfo = await FileSystem.getInfoAsync(testPath);
-      console.log("File system test successful:", testInfo);
-      await FileSystem.deleteAsync(testPath);
-      Alert.alert("Success", "File system access is working!");
-    } catch (error) {
-      console.error("File system test failed:", error);
-      Alert.alert("Error", `File system test failed: ${error.message}`);
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      await uploadImageToBackend(uri);
     }
   };
+
+  useEffect(() => {
+    if (!mediaPermission?.granted) requestMediaPermission();
+    const getInitialDiet = async () => {
+      const stored = await AsyncStorage.getItem("dietRecommendation");
+      initialDietRef.current = stored || "";
+    };
+    getInitialDiet();
+  }, []);
+
+  useEffect(() => {
+    if (diet.trim() && diet !== initialDietRef.current) {
+      setLoading(false);
+      router.push("/confirmation");
+    }
+  }, [diet]);
 
   return (
     <SafeAreaView
       style={{
+        backgroundColor: "#DFF6FB",
         flex: 1,
-        justifyContent: "center",
         alignItems: "center",
-        padding: 20,
+        justifyContent: "center",
       }}
     >
-      <View style={{ alignItems: "center" }}>
-        <Text style={{ fontSize: 24, fontWeight: "bold", marginBottom: 20 }}>
-          Upload Document
-        </Text>
+      {!loading && (
+        <>
+          <TouchableOpacity
+            onPress={pickImage}
+            style={{
+              backgroundColor: "#008CDB",
+              paddingVertical: 15,
+              paddingHorizontal: 30,
+              borderRadius: 30,
+              flexDirection: "row",
+              alignItems: "center",
+            }}
+          >
+            <Ionicons
+              name="images-outline"
+              size={24}
+              color="white"
+              style={{ marginRight: 10 }}
+            />
+            <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
+              Select Report
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push("/scan")}
+            style={{
+              backgroundColor: "#008CDB",
+              paddingVertical: 15,
+              paddingHorizontal: 30,
+              borderRadius: 30,
+              flexDirection: "row",
+              alignItems: "center",
+              marginTop: 20,
+            }}
+          >
+            <Ionicons
+              name="camera-outline"
+              size={24}
+              color="white"
+              style={{ marginRight: 10 }}
+            />
+            <Text style={{ color: "white", fontSize: 18, fontWeight: "bold" }}>
+              Scan Report
+            </Text>
+          </TouchableOpacity>
+        </>
+      )}
 
-        <Text style={{ marginBottom: 30, textAlign: "center" }}>
-          Please select a document to upload. It will be saved locally in the
-          app's document directory.
-        </Text>
-
-        <Button
-          title={isUploading ? "Uploading..." : "📄 Select Document"}
-          onPress={pickAndStoreDocument}
-          disabled={isUploading}
-        />
-
-        <View style={{ marginTop: 20 }}>
-          <Button
-            title="🔧 Test File System"
-            onPress={testFileSystemAccess}
-            color="#orange"
+      {loading && (
+        <View
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            backgroundColor: "#DFF6FB",
+            paddingTop: 50,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "bold",
+              marginBottom: 20,
+              position: "absolute",
+              top: 100,
+            }}
+          >
+            Let's see what we can do for you...
+          </Text>
+          <LottieView
+            source={require("../../assets/animations/AIHeart.json")}
+            autoPlay
+            loop
+            style={{
+              height: "100%",
+              width: "100%",
+            }}
           />
         </View>
-
-        {storedPath && (
-          <View style={{ marginTop: 20, maxWidth: "100%" }}>
-            <Text style={{ fontSize: 16, fontWeight: "600" }}>Saved to:</Text>
-            <Text
-              style={{
-                color: "gray",
-                marginTop: 5,
-                fontSize: 12,
-                flexWrap: "wrap",
-              }}
-            >
-              {storedPath}
-            </Text>
-          </View>
-        )}
-
-        <View style={{ marginTop: 20 }}>
-          <Text style={{ fontSize: 12, color: "gray", textAlign: "center" }}>
-            Platform: {Platform.OS}
-          </Text>
-          <Text style={{ fontSize: 12, color: "gray", textAlign: "center" }}>
-            Doc Directory: {FileSystem.documentDirectory}
-          </Text>
-        </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
