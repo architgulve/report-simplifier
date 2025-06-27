@@ -1,44 +1,76 @@
-import React, { useState, useEffect } from "react";
+// Modified: MedicationReminders with properly timed local notifications
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Switch,
   ScrollView,
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import {
-  getAllMedicines,
-  createMedicineTable,
-  deleteMedicine,
-  getAllNotifications,
-  deleteNoti,
-} from "../../../utility/database";
+import { getAllNotifications, deleteNoti } from "../../../utility/database";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SafeAreaView } from "react-native-safe-area-context";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+const requestNotificationPermission = async () => {
+  const { status } = await Notifications.requestPermissionsAsync();
+  return status === "granted";
+};
+
+const scheduleNotification = async (title, body, hour, minute) => {
+  const now = new Date();
+  const scheduledTime = new Date();
+  scheduledTime.setHours(hour);
+  scheduledTime.setMinutes(minute);
+  scheduledTime.setSeconds(0);
+
+  if (scheduledTime <= now) {
+    scheduledTime.setDate(scheduledTime.getDate() + 1); // next day
+  }
+
+  const trigger = scheduledTime.getTime() - now.getTime();
+  console.log(trigger);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      sound: true,
+    },
+    
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: Math.floor(trigger / 1000),
+    },
+  });
+};
+
+const parseTime = (timeStr) => {
+  const [hour, minute] = timeStr.trim().split(":").map(Number);
+  return { hour, minute };
+};
 
 export default function MedicationReminders() {
-  const [notifications, setNotifications] = useState({
-    pushnotifications: false,
-    voicereminders: false,
-    snooze: false,
-  });
-
-  const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notis, setNotis] = useState([]);
-
-  const now = new Date();
-  const currentTime = now.toTimeString().slice(0, 5);
 
   const [morningTime, setMorningTime] = useState("09:00");
   const [afternoonTime, setAfternoonTime] = useState("13:00");
   const [nightTime, setNightTime] = useState("20:00");
+
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
 
   const fetchMealTimes = async () => {
     const tempMorning = await AsyncStorage.getItem("morningTime");
@@ -52,50 +84,37 @@ export default function MedicationReminders() {
   const fetchMeds = async () => {
     try {
       setLoading(true);
-      await createMedicineTable();
-      const meds = await getAllMedicines();
+      // await Notifications.cancelAllScheduledNotificationsAsync();
+
       const noti = await getAllNotifications();
       setNotis(noti);
-      const formatted = [];
 
-      // Get saved taken statuses from storage
-      const storedTakenMapStr = await AsyncStorage.getItem("takenStatus");
-      const takenMap = storedTakenMapStr ? JSON.parse(storedTakenMapStr) : {};
+      const granted = await requestNotificationPermission();
+      if (!granted) return;
 
-      meds.forEach((med) => {
-        const times = med.TimeToBeTakenAt.split(",");
-        const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
-
-        times.forEach((time, index) => {
-          const timeLabel =
-            index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
-          const medId = `${med.MedicineID}-${index}`;
-          if (time && time.trim()) {
-            formatted.push({
-              id: medId,
-              originalId: med.MedicineID,
-              name: med.MedicineName,
-              dosage: `${dosage}mg`,
-              time: time.trim(),
-              timeSlot: timeLabel,
-              taken: takenMap[medId] ?? false,
-              startDate: med.StartDate,
-              numberOfDays: med.NumberOfDays,
-            });
-          }
-        });
-      });
-
-      formatted.sort((a, b) => a.time.localeCompare(b.time));
-      setMedications(formatted);
+      for (const n of noti) {
+        let time = "";
+        if (n.NotificationTime === "morning") time = morningTime;
+        else if (n.NotificationTime === "afternoon") time = afternoonTime;
+        else time = nightTime;
+       
+        const { hour, minute } = parseTime(time);
+        const title = `Time to take ${n.NotificationName}`;
+        const body = `Reminder to take your medicine.`;
+        console.log("⏰ Scheduling notification:", title, "at", hour, minute);
+        await scheduleNotification(title, body, hour, minute);
+      }
     } catch (error) {
       console.error("❌ Error fetching medications:", error);
     } finally {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    fetchMeds();
+    fetchMealTimes();
+  }, []);
 
-  // Use useFocusEffect to refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       fetchMeds();
@@ -103,79 +122,6 @@ export default function MedicationReminders() {
     }, [])
   );
 
-  // Also fetch on component mount
-  useEffect(() => {
-    fetchMeds();
-    fetchMealTimes();
-  }, []);
-
-  const handleToggle = async (id) => {
-    const updatedMeds = medications.map((m) =>
-      m.id === id ? { ...m, taken: !m.taken } : m
-    );
-    setMedications(updatedMeds);
-
-    try {
-      const takenMap = {};
-      updatedMeds.forEach((m) => {
-        takenMap[m.id] = m.taken;
-      });
-      await AsyncStorage.setItem("takenStatus", JSON.stringify(takenMap));
-    } catch (e) {
-      console.log("⚠️ Failed to save taken statuses", e);
-    }
-  };
-
-  const handleDeleteMedicine = (originalId, medicineName) => {
-    Alert.alert(
-      "Delete Medication",
-      `Are you sure you want to delete "${medicineName}"? This will remove all reminders for this medication.`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const success = await deleteMedicine(originalId);
-              if (success) {
-                console.log(
-                  `✅ Successfully deleted medicine with ID: ${originalId}`
-                );
-                // Refresh the medications list
-                await fetchMeds();
-                Alert.alert("Success", "Medication deleted successfully!");
-              } else {
-                Alert.alert(
-                  "Error",
-                  "Failed to delete medication. Please try again."
-                );
-              }
-            } catch (error) {
-              console.error("❌ Error deleting medicine:", error);
-              Alert.alert(
-                "Error",
-                "An error occurred while deleting the medication."
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const takenCount = notis.filter((m) => m.taken).length;
-  const pendingCount = notis.length - takenCount;
-
-  const handleNotificationToggle = (key) => {
-    setNotifications((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
 
   if (loading) {
     return (
@@ -193,34 +139,16 @@ export default function MedicationReminders() {
   return (
     <SafeAreaView
       edges={["top"]}
-      style={{
-        backgroundColor: "#DFF6FB",
-        flex: 1,
-      }}
+      style={{ backgroundColor: "#DFF6FB", flex: 1 }}
     >
       <ScrollView style={styles.container}>
         <View style={styles.innerContainer}>
-          {/* Title */}
           <Text style={styles.mainTitle}>Medication Reminders</Text>
           <Text style={styles.subtitle}>
             Stay on track with your medication schedule
           </Text>
 
-          {/* Summary Cards */}
           <View style={styles.summaryContainer}>
-            {/* <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: "green" }]}>
-                {takenCount}
-              </Text>
-              <Text>Taken</Text>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={[styles.summaryNumber, { color: "red" }]}>
-                {pendingCount}
-              </Text>
-              <Text>Pending</Text>
-            </View> */}
-            <View></View>
             <View style={styles.summaryCard}>
               <Text style={[styles.summaryNumber, { color: "#007AFF" }]}>
                 {notis.length}
@@ -228,6 +156,7 @@ export default function MedicationReminders() {
               <Text>Total</Text>
             </View>
           </View>
+
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => router.push("/(medireminders)/addmedications")}
@@ -236,21 +165,13 @@ export default function MedicationReminders() {
             <Text style={styles.addButtonText}>Add New Medication</Text>
           </TouchableOpacity>
 
-          <View>
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: "bold",
-                marginBottom: 20,
-                marginTop: 20,
-              }}
-            >
-              Medication Reminders
-            </Text>
-          </View>
+          <Text
+            style={{ fontSize: 20, fontWeight: "bold", marginVertical: 20 }}
+          >
+            Medication Reminders
+          </Text>
 
-          {/* Medication List */}
-          {medications.length === 0 ? (
+          {notis.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="medical" size={64} color="#ccc" />
               <Text style={styles.emptyStateText}>
@@ -261,199 +182,62 @@ export default function MedicationReminders() {
               </Text>
             </View>
           ) : (
-            notis.map((noti) => (
-              <View
-                key={noti.NotificationID}
-                style={{
-                  padding: 20,
-                  backgroundColor: "white",
-                  marginBottom: 10,
-                  borderRadius: 10,
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                }}
-              >
+            notis.map((noti) => {
+              const isUpcoming = (() => {
+                if (noti.NotificationTime === "morning")
+                  return morningTime > currentTime;
+                if (noti.NotificationTime === "afternoon")
+                  return afternoonTime > currentTime;
+                return nightTime > currentTime;
+              })();
+
+              const displayTime =
+                noti.NotificationTime === "morning"
+                  ? morningTime
+                  : noti.NotificationTime === "afternoon"
+                    ? afternoonTime
+                    : nightTime;
+
+              return (
                 <View
+                  key={noti.NotificationID}
                   style={{
-                    width: "90%",
+                    padding: 20,
+                    backgroundColor: "white",
+                    marginBottom: 10,
+                    borderRadius: 10,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
                   }}
                 >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {noti.NotificationName}
-                  </Text>
-                  {/* <Text
-                  style={{
-                    marginTop: 10,
-                  }}
-                >
-                  Time: {noti.NotificationTime}
-                </Text> */}
-                  {noti.NotificationTime === "morning" && (
-                    <>
-                      <View style={{ flexDirection: "row" }}>
-                        <View
-                          style={{
-                            padding: 10,
-                          }}
-                        >
-                          <Text style={{ marginTop: 10 }}>
-                            Time: {morningTime}
-                          </Text>
-                        </View>
-
-                        {morningTime > currentTime ? (
-                          <View
-                            style={{
-                              padding: 10,
-                              backgroundColor: "#FFB6C1",
-                              borderRadius: 10,
-                              marginTop: 10,
-                              justifyContent: "center",
-                              alignItems: "center",
-                              width: "50%",
-                            }}
-                          >
-                            <Text
-                              style={{ color: "darkred", fontWeight: "bold" }}
-                            >
-                              Upcoming
-                            </Text>
-                          </View>
-                        ) : (
-                          <>
-                            <View
-                              style={{
-                                padding: 10,
-                                backgroundColor: "grey",
-                                borderRadius: 10,
-                                marginTop: 10,
-                                justifyContent: "center",
-                                alignItems: "center",
-                                width: "50%",
-                              }}
-                            >
-                              <Text style={{ color: "white" }}>Done</Text>
-                            </View>
-                          </>
-                        )}
-                      </View>
-                    </>
-                  )}
-                  {noti.NotificationTime === "afternoon" && (
-                    <>
-                      <View style={{ flexDirection: "row" }}>
-                        <View
-                          style={{
-                            padding: 10,
-                          }}
-                        >
-                          <Text style={{ marginTop: 10 }}>
-                            Time: {afternoonTime}
-                          </Text>
-                        </View>
-
-                        {afternoonTime > currentTime ? (
-                          <View
-                            style={{
-                              padding: 10,
-                              backgroundColor: "#FFB6C1",
-                              borderRadius: 10,
-                              marginTop: 10,
-                              justifyContent: "center",
-                              alignItems: "center",
-                              width: "50%",
-                            }}
-                          >
-                            <Text
-                              style={{ color: "darkred", fontWeight: "bold" }}
-                            >
-                              Upcoming
-                            </Text>
-                          </View>
-                        ) : (
-                          <>
-                            <View
-                              style={{
-                                padding: 10,
-                                backgroundColor: "grey",
-                                borderRadius: 10,
-                                marginTop: 10,
-                                justifyContent: "center",
-                                alignItems: "center",
-                                width: "50%",
-                              }}
-                            >
-                              <Text style={{ color: "white" }}>Done</Text>
-                            </View>
-                          </>
-                        )}
-                      </View>
-                    </>
-                  )}
-                  {(noti.NotificationTime === "evening" ||
-                    noti.NotificationTime === "night") && (
-                    <>
-                      <View style={{ flexDirection: "row" }}>
-                        <View
-                          style={{
-                            padding: 10,
-                          }}
-                        >
-                          <Text style={{ marginTop: 10 }}>
-                            Time: {nightTime}
-                          </Text>
-                        </View>
-
-                        {nightTime > currentTime ? (
-                          <View
-                            style={{
-                              padding: 10,
-                              backgroundColor: "#FFB6C1",
-                              borderRadius: 10,
-                              marginTop: 10,
-                              justifyContent: "center",
-                              alignItems: "center",
-                              width: "50%",
-                            }}
-                          >
-                            <Text
-                              style={{ color: "darkred", fontWeight: "bold" }}
-                            >
-                              Upcoming
-                            </Text>
-                          </View>
-                        ) : (
-                          <>
-                            <View
-                              style={{
-                                padding: 10,
-                                backgroundColor: "grey",
-                                borderRadius: 10,
-                                marginTop: 10,
-                                justifyContent: "center",
-                                alignItems: "center",
-                                width: "50%",
-                              }}
-                            >
-                              <Text style={{ color: "white" }}>Done</Text>
-                            </View>
-                          </>
-                        )}
-                      </View>
-                    </>
-                  )}
-                </View>
-                <View>
+                  <View style={{ width: "90%" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                      {noti.NotificationName}
+                    </Text>
+                    <Text style={{ marginTop: 10 }}>Time: {displayTime}</Text>
+                    <View
+                      style={{
+                        padding: 10,
+                        backgroundColor: isUpcoming ? "#FFB6C1" : "grey",
+                        borderRadius: 10,
+                        marginTop: 10,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        width: "50%",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: isUpcoming ? "darkred" : "white",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {isUpcoming ? "Upcoming" : "Done"}
+                      </Text>
+                    </View>
+                  </View>
                   <TouchableOpacity
-                    style={{
-                      padding: 10,
-                      borderRadius: 99,
-                    }}
+                    style={{ padding: 10, borderRadius: 99 }}
                     onPress={() => {
                       deleteNoti(noti.NotificationID);
                       fetchMeds();
@@ -462,16 +246,29 @@ export default function MedicationReminders() {
                     <Ionicons name="trash-outline" size={20} color="red" />
                   </TouchableOpacity>
                 </View>
-              </View>
-            ))
+              );
+            })
           )}
-
-          {/* Add Medication Button */}
         </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() =>
+            scheduleNotification(
+              "Test",
+              "This is a test",
+              new Date().getHours(),
+              new Date().getMinutes() + 1
+            )
+          }
+        >
+          <Text style={styles.addButtonText}>Send Test Notification</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 }
+
+// (StyleSheet remains unchanged) [RETAIN YOUR EXISTING STYLES BELOW THIS LINE] ↓
 
 const styles = StyleSheet.create({
   container: {

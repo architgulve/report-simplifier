@@ -25,7 +25,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const generateTimeSlots = () => {
   const timeSlots = [];
   for (let hour = 0; hour <= 23; hour++) {
-    for (let minute = 0; minute < 60; minute += 60) {
+    for (let minute = 0; minute < 60; minute += 5) {
       const formattedTime = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
       timeSlots.push(formattedTime);
     }
