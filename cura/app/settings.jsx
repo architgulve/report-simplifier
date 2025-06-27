@@ -9,10 +9,10 @@ export default function ProfileSettings() {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollView}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>Profile and Settings</Text>
         <Text style={styles.subtitle}>Manage your health information</Text>
 
-        
+        {/* Personal Information */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Personal Information</Text>
           <Text style={styles.label}>Full Name</Text>
@@ -21,7 +21,7 @@ export default function ProfileSettings() {
           <TextInput keyboardType="numeric" style={styles.input} />
         </View>
 
-        
+        {/* Notification Settings */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Notification Settings</Text>
           <View style={styles.row}>
@@ -38,19 +38,18 @@ export default function ProfileSettings() {
           </View>
         </View>
 
-        
+        {/* Meal Timings */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Language & Preference</Text>
-          <TextInput value="English" editable={false} style={styles.input} />
-          <View style={styles.row}>
-            <Text style={styles.textSize}>Size of Text:</Text>
-            <View style={styles.textSizeBox}>
-              <Text style={styles.textSizeValue}>16 px</Text>
-            </View>
-          </View>
+          <Text style={styles.cardTitle}>Meal Timings</Text>
+          <Text style={styles.label}>Breakfast</Text>
+          <TextInput style={styles.input} />
+          <Text style={styles.label}>Lunch</Text>
+          <TextInput style={styles.input} />
+          <Text style={styles.label}>Dinner</Text>
+          <TextInput style={styles.input} />
         </View>
 
-        
+        {/* Medical Information */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Medical Information</Text>
           <Text style={styles.label}>Blood Group</Text>
@@ -68,19 +67,20 @@ export default function ProfileSettings() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#E7F6FB',
+    backgroundColor: '#DDF5FB',
   },
   scrollView: {
     padding: 16,
   },
   title: {
-    fontSize: 30,
-    fontWeight: '700',
+    fontSize: 24,
+    fontWeight: '600',
     textAlign: 'center',
     marginBottom: 4,
+    color: '#1E1E1E',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     textAlign: 'center',
     marginBottom: 16,
     color: '#555',
@@ -97,12 +97,13 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
     marginBottom: 12,
+    color: '#333',
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#444',
     marginBottom: 4,
     marginTop: 8,
@@ -115,8 +116,8 @@ const styles = StyleSheet.create({
   },
   inputReadonly: {
     backgroundColor: '#F7F2F2',
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 8,
+    padding: 10,
     marginBottom: 12,
   },
   row: {
@@ -124,19 +125,5 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-  },
-  textSize: {
-    fontSize: 14,
-    color: '#444',
-  },
-  textSizeBox: {
-    backgroundColor: '#F4F4F4',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  textSizeValue: {
-    fontSize: 14,
-    color: '#333',
   },
 });
