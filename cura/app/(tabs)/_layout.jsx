@@ -26,7 +26,7 @@ const TabLayout = () => {
               ),
             }}
           />
-          <Tabs.Screen
+          {/* <Tabs.Screen
             name="diet"
             options={{
               title: "Diet Plan",
@@ -43,7 +43,7 @@ const TabLayout = () => {
                 <Ionicons name="stats-chart" size={size} color={color} />
               ),
             }}
-          />
+          /> */}
         </Tabs>
       </SafeAreaProvider>
     </GestureHandlerRootView>

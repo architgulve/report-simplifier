@@ -20,6 +20,7 @@ import {
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function MedicationReminders() {
   const [notifications, setNotifications] = useState({
@@ -31,6 +32,22 @@ export default function MedicationReminders() {
   const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notis, setNotis] = useState([]);
+
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
+
+  const [morningTime, setMorningTime] = useState("09:00");
+  const [afternoonTime, setAfternoonTime] = useState("13:00");
+  const [nightTime, setNightTime] = useState("20:00");
+
+  const fetchMealTimes = async () => {
+    const tempMorning = await AsyncStorage.getItem("morningTime");
+    const tempAfternoon = await AsyncStorage.getItem("afternoonTime");
+    const tempNight = await AsyncStorage.getItem("nightTime");
+    setMorningTime(tempMorning || "09:00");
+    setAfternoonTime(tempAfternoon || "13:00");
+    setNightTime(tempNight || "20:00");
+  };
 
   const fetchMeds = async () => {
     try {
@@ -82,12 +99,14 @@ export default function MedicationReminders() {
   useFocusEffect(
     useCallback(() => {
       fetchMeds();
+      fetchMealTimes();
     }, [])
   );
 
   // Also fetch on component mount
   useEffect(() => {
     fetchMeds();
+    fetchMealTimes();
   }, []);
 
   const handleToggle = async (id) => {
@@ -172,215 +191,292 @@ export default function MedicationReminders() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.innerContainer}>
-        {/* Title */}
-        <Text style={styles.mainTitle}>Medication Reminders</Text>
-        <Text style={styles.subtitle}>
-          Stay on track with your medication schedule
-        </Text>
+    <SafeAreaView
+      edges={["top"]}
+      style={{
+        backgroundColor: "#DFF6FB",
+        flex: 1,
+      }}
+    >
+      <ScrollView style={styles.container}>
+        <View style={styles.innerContainer}>
+          {/* Title */}
+          <Text style={styles.mainTitle}>Medication Reminders</Text>
+          <Text style={styles.subtitle}>
+            Stay on track with your medication schedule
+          </Text>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: "green" }]}>
-              {takenCount}
-            </Text>
-            <Text>Taken</Text>
+          {/* Summary Cards */}
+          <View style={styles.summaryContainer}>
+            {/* <View style={styles.summaryCard}>
+              <Text style={[styles.summaryNumber, { color: "green" }]}>
+                {takenCount}
+              </Text>
+              <Text>Taken</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={[styles.summaryNumber, { color: "red" }]}>
+                {pendingCount}
+              </Text>
+              <Text>Pending</Text>
+            </View> */}
+            <View></View>
+            <View style={styles.summaryCard}>
+              <Text style={[styles.summaryNumber, { color: "#007AFF" }]}>
+                {notis.length}
+              </Text>
+              <Text>Total</Text>
+            </View>
           </View>
-          <View style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: "red" }]}>
-              {pendingCount}
-            </Text>
-            <Text>Pending</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: "blue" }]}>
-              {notis.length}
-            </Text>
-            <Text>Total</Text>
-          </View>
-        </View>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("/(medireminders)/addmedications")}
+          >
+            <Ionicons name="add-circle" size={20} color="white" />
+            <Text style={styles.addButtonText}>Add New Medication</Text>
+          </TouchableOpacity>
 
-        <View>
-          <Text style={{
-            fontSize: 20,
-            fontWeight: 'bold',
-            marginBottom: 20,
-            marginTop: 20,
-          }}>Medication Reminders</Text>
-        </View>
-
-        {/* Medication List */}
-        {medications.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="medical" size={64} color="#ccc" />
-            <Text style={styles.emptyStateText}>No medications added yet</Text>
-            <Text style={styles.emptyStateSubtext}>
-              Tap the button below to add your first medication
-            </Text>
-          </View>
-        ) : (
-          // medications.map((med) => (
-          //   <View
-          //     key={med.id}
-          //     style={[
-          //       styles.medCard,
-          //       {
-          //         backgroundColor: med.taken ? "#E0F8E0" : "#F5F5F5",
-          //         borderColor: med.taken ? "green" : "#ccc",
-          //       },
-          //     ]}
-          //   >
-          //     <View style={styles.medHeader}>
-          //       <View style={styles.medInfo}>
-          //         <Text style={styles.medName}>{med.name}</Text>
-          //         <Text style={styles.timeSlotLabel}>{med.timeSlot} Dose</Text>
-          //       </View>
-          //       <View style={styles.headerRight}>
-          //         <Text
-          //           style={[
-          //             styles.statusBadge,
-          //             { backgroundColor: med.taken ? "green" : "red" },
-          //           ]}
-          //         >
-          //           {med.taken ? "Taken" : "Pending"}
-          //         </Text>
-          //         <TouchableOpacity
-          //           style={styles.deleteButton}
-          //           onPress={() =>
-          //             handleDeleteMedicine(med.originalId, med.name)
-          //           }
-          //         >
-          //           <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-          //         </TouchableOpacity>
-          //       </View>
-          //     </View>
-          //     <Text style={styles.dosageText}>
-          //       {med.dosage} • {med.timeSlot}
-          //     </Text>
-          //     <Text style={styles.timeText}>🕒 {med.time}</Text>
-
-          //     <View style={styles.actionRow}>
-          //       <TouchableOpacity
-          //         style={[
-          //           styles.largeActionButton,
-          //           { backgroundColor: med.taken ? "#6c757d" : "#1E1E2F" },
-          //         ]}
-          //         onPress={() => handleToggle(med.id)}
-          //       >
-          //         <Text style={styles.actionButtonText}>
-          //           {med.taken ? "Undo" : "Mark As Taken"}
-          //         </Text>
-          //       </TouchableOpacity>
-          //       <Switch
-          //         value={med.taken}
-          //         onValueChange={() => handleToggle(med.id)}
-          //         trackColor={{ false: "#767577", true: "#81b0ff" }}
-          //         thumbColor={med.taken ? "#f5dd4b" : "#f4f3f4"}
-          //       />
-          //     </View>
-          //   </View>
-          // ))
-          notis.map((noti) => (
-            <View
-              key={noti.NotificationID}
+          <View>
+            <Text
               style={{
-                padding: 20,
-                backgroundColor: "white",
-                marginBottom: 10,
-                borderRadius: 10,
-                flexDirection: "row",
-                justifyContent: "space-between",
+                fontSize: 20,
+                fontWeight: "bold",
+                marginBottom: 20,
+                marginTop: 20,
               }}
             >
-              <View style={{
-                width: "90%",
-              }}>
-                <Text
+              Medication Reminders
+            </Text>
+          </View>
+
+          {/* Medication List */}
+          {medications.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="medical" size={64} color="#ccc" />
+              <Text style={styles.emptyStateText}>
+                No medications added yet
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Tap the button below to add your first medication
+              </Text>
+            </View>
+          ) : (
+            notis.map((noti) => (
+              <View
+                key={noti.NotificationID}
+                style={{
+                  padding: 20,
+                  backgroundColor: "white",
+                  marginBottom: 10,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                }}
+              >
+                <View
                   style={{
-                    fontSize: 16,
-                    fontWeight: "bold",
+                    width: "90%",
                   }}
                 >
-                  {noti.NotificationName}
-                </Text>
-                <Text
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {noti.NotificationName}
+                  </Text>
+                  {/* <Text
                   style={{
                     marginTop: 10,
                   }}
                 >
                   Time: {noti.NotificationTime}
-                </Text>
+                </Text> */}
+                  {noti.NotificationTime === "morning" && (
+                    <>
+                      <View style={{ flexDirection: "row" }}>
+                        <View
+                          style={{
+                            padding: 10,
+                          }}
+                        >
+                          <Text style={{ marginTop: 10 }}>
+                            Time: {morningTime}
+                          </Text>
+                        </View>
+
+                        {morningTime > currentTime ? (
+                          <View
+                            style={{
+                              padding: 10,
+                              backgroundColor: "#FFB6C1",
+                              borderRadius: 10,
+                              marginTop: 10,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              width: "50%",
+                            }}
+                          >
+                            <Text
+                              style={{ color: "darkred", fontWeight: "bold" }}
+                            >
+                              Upcoming
+                            </Text>
+                          </View>
+                        ) : (
+                          <>
+                            <View
+                              style={{
+                                padding: 10,
+                                backgroundColor: "grey",
+                                borderRadius: 10,
+                                marginTop: 10,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                width: "50%",
+                              }}
+                            >
+                              <Text style={{ color: "white" }}>Done</Text>
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    </>
+                  )}
+                  {noti.NotificationTime === "afternoon" && (
+                    <>
+                      <View style={{ flexDirection: "row" }}>
+                        <View
+                          style={{
+                            padding: 10,
+                          }}
+                        >
+                          <Text style={{ marginTop: 10 }}>
+                            Time: {afternoonTime}
+                          </Text>
+                        </View>
+
+                        {afternoonTime > currentTime ? (
+                          <View
+                            style={{
+                              padding: 10,
+                              backgroundColor: "#FFB6C1",
+                              borderRadius: 10,
+                              marginTop: 10,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              width: "50%",
+                            }}
+                          >
+                            <Text
+                              style={{ color: "darkred", fontWeight: "bold" }}
+                            >
+                              Upcoming
+                            </Text>
+                          </View>
+                        ) : (
+                          <>
+                            <View
+                              style={{
+                                padding: 10,
+                                backgroundColor: "grey",
+                                borderRadius: 10,
+                                marginTop: 10,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                width: "50%",
+                              }}
+                            >
+                              <Text style={{ color: "white" }}>Done</Text>
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    </>
+                  )}
+                  {(noti.NotificationTime === "evening" ||
+                    noti.NotificationTime === "night") && (
+                    <>
+                      <View style={{ flexDirection: "row" }}>
+                        <View
+                          style={{
+                            padding: 10,
+                          }}
+                        >
+                          <Text style={{ marginTop: 10 }}>
+                            Time: {nightTime}
+                          </Text>
+                        </View>
+
+                        {nightTime > currentTime ? (
+                          <View
+                            style={{
+                              padding: 10,
+                              backgroundColor: "#FFB6C1",
+                              borderRadius: 10,
+                              marginTop: 10,
+                              justifyContent: "center",
+                              alignItems: "center",
+                              width: "50%",
+                            }}
+                          >
+                            <Text
+                              style={{ color: "darkred", fontWeight: "bold" }}
+                            >
+                              Upcoming
+                            </Text>
+                          </View>
+                        ) : (
+                          <>
+                            <View
+                              style={{
+                                padding: 10,
+                                backgroundColor: "grey",
+                                borderRadius: 10,
+                                marginTop: 10,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                width: "50%",
+                              }}
+                            >
+                              <Text style={{ color: "white" }}>Done</Text>
+                            </View>
+                          </>
+                        )}
+                      </View>
+                    </>
+                  )}
+                </View>
+                <View>
+                  <TouchableOpacity
+                    style={{
+                      padding: 10,
+                      borderRadius: 99,
+                    }}
+                    onPress={() => {
+                      deleteNoti(noti.NotificationID);
+                      fetchMeds();
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="red" />
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View>
-                <TouchableOpacity style={{
-                  padding: 10,
-                  borderRadius: 99,
-                }}
-                onPress={() => {
-                  deleteNoti(noti.NotificationID);
-                  fetchMeds();
-                }}
-                >
-                  <Ionicons name="trash-outline" size={20} color="red" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
-        )}
+            ))
+          )}
 
-        {/* Add Medication Button */}
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push("/(medireminders)/addmedications")}
-        >
-          <Ionicons name="add-circle" size={20} color="#007AFF" />
-          <Text style={styles.addButtonText}>Add New Medication</Text>
-        </TouchableOpacity>
-
-        {/* Notification Settings */}
-        <View style={styles.notificationContainer}>
-          <Text style={styles.notificationTitle}>Notification Settings</Text>
-
-          <View style={styles.notificationRow}>
-            <Text style={styles.notificationLabel}>Push Notifications</Text>
-            <Switch
-              value={notifications.pushnotifications}
-              onValueChange={() =>
-                handleNotificationToggle("pushnotifications")
-              }
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-            />
-          </View>
-
-          <View style={styles.notificationRow}>
-            <Text style={styles.notificationLabel}>Voice Reminders</Text>
-            <Switch
-              value={notifications.voicereminders}
-              onValueChange={() => handleNotificationToggle("voicereminders")}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-            />
-          </View>
-
-          <View style={styles.notificationRow}>
-            <Text style={styles.notificationLabel}>Snooze Options</Text>
-            <Switch
-              value={notifications.snooze}
-              onValueChange={() => handleNotificationToggle("snooze")}
-              trackColor={{ false: "#767577", true: "#81b0ff" }}
-            />
-          </View>
+          {/* Add Medication Button */}
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E6F4F1",
+    backgroundColor: "#DFF6FB",
     padding: 16,
   },
   header: {
@@ -415,7 +511,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     borderRadius: 8,
-    width: "30%",
+    width: "100%",
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -518,7 +614,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   addButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#007AFF",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
@@ -532,7 +628,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   addButtonText: {
-    color: "#007AFF",
+    color: "white",
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,

@@ -221,6 +221,7 @@ export const insertSetting = async (name, age, language, bloodgroup, emergencyCo
       `INSERT OR REPLACE INTO settings (name, age, language, bloodgroup, emergencyContact, primaryDoctor) VALUES (?, ?, ?, ?, ?, ?);`,
       [name, age, language, bloodgroup, emergencyContact, primaryDoctor]
     );
+    console.log('💾 Insert result:', result);
     return true;
   } catch (error) {
     console.error('❌ Error inserting setting:', error);
