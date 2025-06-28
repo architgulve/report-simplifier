@@ -1,130 +1,141 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { getAllMedicines, createMedicineTable } from "../utility/database";
+import {
+  getAllMedicines,
+  createMedicineTable,
+  getAllNotifications,
+} from "../utility/database";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 
 export default function HomeReminderPreview() {
-  const [previewMeds, setPreviewMeds] = useState([]);
+  const [notis, setNotis] = useState([]);
+
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
+
+  const [morningTime, setMorningTime] = useState("09:00");
+  const [afternoonTime, setAfternoonTime] = useState("13:00");
+  const [nightTime, setNightTime] = useState("20:00");
+
+  const fetchMealTimes = async () => {
+    const tempMorning = await AsyncStorage.getItem("morningTime");
+    const tempAfternoon = await AsyncStorage.getItem("afternoonTime");
+    const tempNight = await AsyncStorage.getItem("nightTime");
+    setMorningTime(tempMorning);
+    setAfternoonTime(tempAfternoon);
+    setNightTime(tempNight);
+  };
+
+  const timemap = {
+    morning: morningTime,
+    afternoon: afternoonTime,
+    night: nightTime,
+    evening: nightTime,
+  };
+
+  const fetchData = async () => {
+    try {
+      const noti = await getAllNotifications();
+      setNotis(noti);
+      console.log("✅ Fetched meds:", noti);
+    } catch (err) {
+      console.error("❌ Error fetching meds for homepage", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        await createMedicineTable();
-        const meds = await getAllMedicines();
-        console.log("✅ Fetched meds:", meds);
-
-        const takenMapStr = await AsyncStorage.getItem("takenStatus");
-        const takenMap = takenMapStr ? JSON.parse(takenMapStr) : {};
-        console.log("🧠 Taken Map:", takenMap);
-
-        const formatted = [];
-
-        meds.forEach((med) => {
-          const times = med.TimeToBeTakenAt?.split(",") || [];
-          const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
-
-          times.forEach((time, index) => {
-            const timeLabel =
-              index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
-            const medId = `${med.MedicineID}-${index}`;
-
-            if (time && time.trim()) {
-              formatted.push({
-                id: medId,
-                name: med.MedicineName,
-                time: time.trim(),
-                timeSlot: timeLabel,
-                taken: takenMap[medId] ?? false,
-              });
-            }
-          });
-        });
-
-        formatted.sort((a, b) => a.time.localeCompare(b.time));
-        console.log("📋 Formatted meds:", formatted.slice(0, 2));
-
-        setPreviewMeds(formatted.slice(0, 2)); // only top 2
-      } catch (err) {
-        console.error("❌ Error fetching meds for homepage", err);
-      }
-    };
-
     fetchData();
+    fetchMealTimes();
   }, []);
 
   return (
     <View
       style={{
-        width: "100%",
         margin: 15,
         backgroundColor: "white",
         borderRadius: 10,
         padding: 10,
       }}
     >
-      <View style={{ flexDirection: "row", alignItems: "center" }}>
-        <Ionicons name="alarm-outline" size={30} color="black" />
-        <Text style={{ fontSize: 20, fontWeight: "bold", marginLeft: 10 }}>
-          Medication Reminders
-        </Text>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <Ionicons name="alarm-outline" size={30} color="black" />
+          <Text style={{ fontSize: 20, fontWeight: "bold", marginLeft: 10 }}>
+            Medication Reminders
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            fetchData();
+            fetchMealTimes();
+          }}
+        >
+          <Ionicons name="refresh-outline" size={30} color="black" />
+        </TouchableOpacity>
       </View>
 
       <View>
-        {previewMeds.map((med, index) => (
-          <View
-            key={index}
-            style={{
-              backgroundColor: "#F0F0F0",
-              width: "100%",
-              height: 70,
-              marginTop: 10,
-              borderRadius: 10,
-              flexDirection: "row",
-              alignItems: "center",
-              paddingLeft: 10,
-            }}
-          >
-            <View
-              style={{
-                width: "55%",
-                height: 50,
-                justifyContent: "center",
-              }}
-            >
-              <Text>{med.name}</Text>
-              <Text>{med.time}</Text>
-            </View>
-            <View
-              style={{
-                width: "45%",
-                height: 45,
-                alignItems: "center",
-                justifyContent: "center",
-                backgroundColor: med.taken ? "#C0F0C0" : "#FFB6C1",
-                borderRadius: 10,
-                padding: 5,
-              }}
-            >
-              <Text
+        {notis.map((noti) => (
+          <View key={noti.NotificationID}>
+            {timemap[noti.NotificationTime] >= currentTime && (
+              <View
                 style={{
-                  color: med.taken ? "green" : "darkred",
-                  fontWeight: "bold",
+                  backgroundColor: "#F0F0F0",
+                  width: "100%",
+                  height: 70,
+                  marginTop: 10,
+                  borderRadius: 10,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  padding: 10,
+                  justifyContent: "space-between",
                 }}
               >
-                {med.taken ? "Taken" : "Due Now"}
-              </Text>
-            </View>
+                <View style={{ width: "55%", justifyContent: "center" }}>
+                  <Text style={{ fontWeight: "bold" }}>
+                    {noti.NotificationName}
+                  </Text>
+                  <Text>{timemap[noti.NotificationTime]}</Text>
+                </View>
+                <View
+                  style={{
+                    width: "30%",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: noti.taken ? "#C0F0C0" : "#FFB6C1",
+                    borderRadius: 10,
+                    padding: 5,
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: noti.taken ? "green" : "darkred",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {noti.taken ? "Taken" : "Upcoming"}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
         ))}
 
+        {/* View All Button */}
         <TouchableOpacity
           onPress={() => router.push("/(medireminders)/remind")}
         >
           <View
             style={{
-              backgroundColor: "#F0F0F0",
+              backgroundColor: "#007AFF",
               width: "50%",
               height: 50,
               marginTop: 10,
@@ -132,16 +143,17 @@ export default function HomeReminderPreview() {
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              paddingLeft: 10,
+              padding: 10,
+              alignSelf: "center",
             }}
           >
             <Ionicons
               name="notifications-outline"
               size={20}
-              color="black"
+              color="white"
               style={{ marginRight: 5 }}
             />
-            <Text>View All Reminders</Text>
+            <Text style={{ color: "white", fontWeight: "bold" }}>View All Reminders</Text>
           </View>
         </TouchableOpacity>
       </View>

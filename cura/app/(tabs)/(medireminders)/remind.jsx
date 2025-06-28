@@ -1,162 +1,126 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Switch,
   ScrollView,
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import {
-  getAllMedicines,
-  createMedicineTable,
-  deleteMedicine,
-} from "../../../utility/database";
+import { getAllNotifications, deleteNoti } from "../../../utility/database";
 import { useFocusEffect } from "@react-navigation/native";
-import { useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as Notifications from "expo-notifications";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+const requestNotificationPermission = async () => {
+  const { status } = await Notifications.requestPermissionsAsync();
+  return status === "granted";
+};
+
+const scheduleNotification = async (title, body, hour, minute) => {
+  const now = new Date();
+  const scheduledTime = new Date();
+  scheduledTime.setHours(hour);
+  scheduledTime.setMinutes(minute);
+  scheduledTime.setSeconds(0);
+
+  if (scheduledTime <= now) {
+    scheduledTime.setDate(scheduledTime.getDate() + 1);
+  }
+
+  const trigger = scheduledTime.getTime() - now.getTime();
+  console.log(trigger);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      sound: true,
+    },
+
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+      seconds: Math.floor(trigger / 1000),
+    },
+  });
+};
+
+const parseTime = (timeStr) => {
+  const [hour, minute] = timeStr.trim().split(":").map(Number);
+  return { hour, minute };
+};
 
 export default function MedicationReminders() {
-  const [notifications, setNotifications] = useState({
-    pushnotifications: false,
-    voicereminders: false,
-    snooze: false,
-  });
-
-  const [medications, setMedications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notis, setNotis] = useState([]);
 
-  const fetchMeds = async () => {
-  try {
-    setLoading(true);
-    await createMedicineTable();
-    const meds = await getAllMedicines();
+  const [morningTime, setMorningTime] = useState("09:00");
+  const [afternoonTime, setAfternoonTime] = useState("13:00");
+  const [nightTime, setNightTime] = useState("20:00");
 
-    const formatted = [];
+  const now = new Date();
+  const currentTime = now.toTimeString().slice(0, 5);
 
-    // Get saved taken statuses from storage
-    const storedTakenMapStr = await AsyncStorage.getItem("takenStatus");
-    const takenMap = storedTakenMapStr ? JSON.parse(storedTakenMapStr) : {};
+  const fetchMealTimes = async () => {
+    const tempMorning = (await AsyncStorage.getItem("morningTime")) || "09:00";
+    const tempAfternoon =
+      (await AsyncStorage.getItem("afternoonTime")) || "13:00";
+    const tempNight = (await AsyncStorage.getItem("nightTime")) || "20:00";
+    setMorningTime(tempMorning);
+    setAfternoonTime(tempAfternoon);
+    setNightTime(tempNight);
+    return { morning: tempMorning, afternoon: tempAfternoon, night: tempNight };
+  };
 
-    meds.forEach((med) => {
-      const times = med.TimeToBeTakenAt.split(",");
-      const dosage = med.QuantityTablet || med.QuantityLiquid || 0;
+  const fetchMeds = async ({ morning, afternoon, night }) => {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    try {
+      setLoading(true);
+      const noti = await getAllNotifications();
+      setNotis(noti);
 
-      times.forEach((time, index) => {
-        const timeLabel =
-          index === 0 ? "Morning" : index === 1 ? "Afternoon" : "Night";
-        const medId = `${med.MedicineID}-${index}`;
-        if (time && time.trim()) {
-          formatted.push({
-            id: medId,
-            originalId: med.MedicineID,
-            name: med.MedicineName,
-            dosage: `${dosage}mg`,
-            time: time.trim(),
-            timeSlot: timeLabel,
-            taken: takenMap[medId] ?? false,
-            startDate: med.StartDate,
-            numberOfDays: med.NumberOfDays,
-          });
-        }
-      });
-    });
+      const granted = await requestNotificationPermission();
+      if (!granted) return;
 
-    formatted.sort((a, b) => a.time.localeCompare(b.time));
-    setMedications(formatted);
-  } catch (error) {
-    console.error("❌ Error fetching medications:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+      for (const n of noti) {
+        let time = "";
+        if (n.NotificationTime === "morning") time = morning;
+        else if (n.NotificationTime === "afternoon") time = afternoon;
+        else time = night;
 
+        const { hour, minute } = parseTime(time);
+        const title = `Time to take ${n.NotificationName}`;
+        const body = `Reminder to take your medicine.`;
+        console.log(title, body, hour, minute);
+        await scheduleNotification(title, body, hour, minute);
+      }
+    } catch (error) {
+      console.error("❌ Error fetching medications:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Use useFocusEffect to refresh data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
-      
-      fetchMeds();
+      const fetchAll = async () => {
+        const times = await fetchMealTimes();
+        await fetchMeds(times);
+      };
+
+      fetchAll();
     }, [])
   );
-
-  // Also fetch on component mount
-  useEffect(() => {
-
-    fetchMeds();
-  }, []);
-
-  const handleToggle = async (id) => {
-  const updatedMeds = medications.map((m) =>
-    m.id === id ? { ...m, taken: !m.taken } : m
-  );
-  setMedications(updatedMeds);
-
-  try {
-    const takenMap = {};
-    updatedMeds.forEach((m) => {
-      takenMap[m.id] = m.taken;
-    });
-    await AsyncStorage.setItem("takenStatus", JSON.stringify(takenMap));
-  } catch (e) {
-    console.log("⚠️ Failed to save taken statuses", e);
-  }
-};
-
-
-  const handleDeleteMedicine = (originalId, medicineName) => {
-    Alert.alert(
-      "Delete Medication",
-      `Are you sure you want to delete "${medicineName}"? This will remove all reminders for this medication.`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const success = await deleteMedicine(originalId);
-              if (success) {
-                console.log(
-                  `✅ Successfully deleted medicine with ID: ${originalId}`
-                );
-                // Refresh the medications list
-                await fetchMeds();
-                Alert.alert("Success", "Medication deleted successfully!");
-              } else {
-                Alert.alert(
-                  "Error",
-                  "Failed to delete medication. Please try again."
-                );
-              }
-            } catch (error) {
-              console.error("❌ Error deleting medicine:", error);
-              Alert.alert(
-                "Error",
-                "An error occurred while deleting the medication."
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const takenCount = medications.filter((m) => m.taken).length;
-  const pendingCount = medications.length - takenCount;
-
-  const handleNotificationToggle = (key) => {
-    setNotifications((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
-  };
 
   if (loading) {
     return (
@@ -172,161 +136,146 @@ export default function MedicationReminders() {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Ionicons name="heart-circle" size={32} color="#00A8E8" />
-        <Text style={styles.headerTitle}>Cura</Text>
-        <Ionicons name="settings" size={24} color="black" />
-      </View>
-
-      {/* Title */}
-      <Text style={styles.mainTitle}>Medication Reminders</Text>
-      <Text style={styles.subtitle}>
-        Stay on track with your medication schedule
-      </Text>
-
-      {/* Summary Cards */}
-      <View style={styles.summaryContainer}>
-        <View style={styles.summaryCard}>
-          <Text style={[styles.summaryNumber, { color: "green" }]}>
-            {takenCount}
+    <SafeAreaView
+      edges={["top"]}
+      style={{ backgroundColor: "#DFF6FB", flex: 1 }}
+    >
+      <ScrollView style={styles.container}>
+        <View style={styles.innerContainer}>
+          <Text style={styles.mainTitle}>Medication Reminders</Text>
+          <Text style={styles.subtitle}>
+            Stay on track with your medication schedule
           </Text>
-          <Text>Taken</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={[styles.summaryNumber, { color: "red" }]}>
-            {pendingCount}
-          </Text>
-          <Text>Pending</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Text style={[styles.summaryNumber, { color: "blue" }]}>
-            {medications.length}
-          </Text>
-          <Text>Total</Text>
-        </View>
-      </View>
 
-      {/* Medication List */}
-      {medications.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="medical" size={64} color="#ccc" />
-          <Text style={styles.emptyStateText}>No medications added yet</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Tap the button below to add your first medication
-          </Text>
-        </View>
-      ) : (
-        medications.map((med) => (
-          <View
-            key={med.id}
-            style={[
-              styles.medCard,
-              {
-                backgroundColor: med.taken ? "#E0F8E0" : "#F5F5F5",
-                borderColor: med.taken ? "green" : "#ccc",
-              },
-            ]}
-          >
-            <View style={styles.medHeader}>
-              <View style={styles.medInfo}>
-                <Text style={styles.medName}>{med.name}</Text>
-                <Text style={styles.timeSlotLabel}>{med.timeSlot} Dose</Text>
-              </View>
-              <View style={styles.headerRight}>
-                <Text
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: med.taken ? "green" : "red" },
-                  ]}
-                >
-                  {med.taken ? "Taken" : "Pending"}
-                </Text>
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => handleDeleteMedicine(med.originalId, med.name)}
-                >
-                  <Ionicons name="trash-outline" size={20} color="#FF3B30" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Text style={styles.dosageText}>
-              {med.dosage} • {med.timeSlot}
-            </Text>
-            <Text style={styles.timeText}>🕒 {med.time}</Text>
-
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[
-                  styles.largeActionButton,
-                  { backgroundColor: med.taken ? "#6c757d" : "#1E1E2F" },
-                ]}
-                onPress={() => handleToggle(med.id)}
-              >
-                <Text style={styles.actionButtonText}>
-                  {med.taken ? "Undo" : "Mark As Taken"}
-                </Text>
-              </TouchableOpacity>
-              <Switch
-                value={med.taken}
-                onValueChange={() => handleToggle(med.id)}
-                trackColor={{ false: "#767577", true: "#81b0ff" }}
-                thumbColor={med.taken ? "#f5dd4b" : "#f4f3f4"}
-              />
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryCard}>
+              <Text style={[styles.summaryNumber, { color: "#007AFF" }]}>
+                {notis.length}
+              </Text>
+              <Text>Total</Text>
             </View>
           </View>
-        ))
-      )}
 
-      {/* Add Medication Button */}
-      <TouchableOpacity
-        style={styles.addButton}
-        onPress={() => router.push("/(medireminders)/addmedications")}
-      >
-        <Ionicons name="add-circle" size={20} color="#007AFF" />
-        <Text style={styles.addButtonText}>Add New Medication</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push("/(medireminders)/addmedications")}
+          >
+            <Ionicons name="add-circle" size={20} color="white" />
+            <Text style={styles.addButtonText}>Add New Medication</Text>
+          </TouchableOpacity>
 
-      {/* Notification Settings */}
-      <View style={styles.notificationContainer}>
-        <Text style={styles.notificationTitle}>Notification Settings</Text>
+          <Text
+            style={{ fontSize: 20, fontWeight: "bold", marginVertical: 20 }}
+          >
+            Medication Reminders
+          </Text>
 
-        <View style={styles.notificationRow}>
-          <Text style={styles.notificationLabel}>Push Notifications</Text>
-          <Switch
-            value={notifications.pushnotifications}
-            onValueChange={() => handleNotificationToggle("pushnotifications")}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-          />
+          {notis.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="medical" size={64} color="#ccc" />
+              <Text style={styles.emptyStateText}>
+                No medications added yet
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Tap the button below to add your first medication
+              </Text>
+            </View>
+          ) : (
+            notis.map((noti) => {
+              const isUpcoming = (() => {
+                if (noti.NotificationTime === "morning")
+                  return morningTime > currentTime;
+                if (noti.NotificationTime === "afternoon")
+                  return afternoonTime > currentTime;
+                return nightTime > currentTime;
+              })();
+
+              const displayTime =
+                noti.NotificationTime === "morning"
+                  ? morningTime
+                  : noti.NotificationTime === "afternoon"
+                    ? afternoonTime
+                    : nightTime;
+
+              return (
+                <View
+                  key={noti.NotificationID}
+                  style={{
+                    padding: 20,
+                    backgroundColor: "white",
+                    marginBottom: 10,
+                    borderRadius: 10,
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <View style={{ width: "90%" }}>
+                    <Text style={{ fontSize: 16, fontWeight: "bold" }}>
+                      {noti.NotificationName}
+                    </Text>
+                    <Text style={{ marginTop: 10 }}>Time: {displayTime}</Text>
+                    <View
+                      style={{
+                        padding: 10,
+                        backgroundColor: isUpcoming ? "#FFB6C1" : "grey",
+                        borderRadius: 10,
+                        marginTop: 10,
+                        justifyContent: "center",
+                        alignItems: "center",
+                        width: "50%",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: isUpcoming ? "darkred" : "white",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {isUpcoming ? "Upcoming" : "Done"}
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity
+                    style={{ padding: 10, borderRadius: 99 }}
+                    onPress={() => {
+                      deleteNoti(noti.NotificationID);
+                      const fetchAll = async () => {
+                        const times = await fetchMealTimes();
+                        await fetchMeds(times);
+                      };
+                
+                      fetchAll();
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="red" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })
+          )}
         </View>
-
-        <View style={styles.notificationRow}>
-          <Text style={styles.notificationLabel}>Voice Reminders</Text>
-          <Switch
-            value={notifications.voicereminders}
-            onValueChange={() => handleNotificationToggle("voicereminders")}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-          />
-        </View>
-
-        <View style={styles.notificationRow}>
-          <Text style={styles.notificationLabel}>Snooze Options</Text>
-          <Switch
-            value={notifications.snooze}
-            onValueChange={() => handleNotificationToggle("snooze")}
-            trackColor={{ false: "#767577", true: "#81b0ff" }}
-          />
-        </View>
-      </View>
-    </ScrollView>
+        {/* <TouchableOpacity
+          style={styles.addButton}
+          onPress={() =>
+            scheduleNotification(
+              "Test",
+              "This is a test",
+              new Date().getHours(),
+              new Date().getMinutes() + 1
+            )
+          }
+        >
+          <Text style={styles.addButtonText}>Send Test Notification</Text>
+        </TouchableOpacity> */}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#E6F4F1",
+    backgroundColor: "#DFF6FB",
     padding: 16,
   },
   header: {
@@ -361,7 +310,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
     borderRadius: 8,
-    width: "30%",
+    width: "100%",
     elevation: 2,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
@@ -464,7 +413,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   addButton: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#007AFF",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
@@ -478,7 +427,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   addButtonText: {
-    color: "#007AFF",
+    color: "white",
     fontSize: 16,
     fontWeight: "600",
     marginLeft: 8,

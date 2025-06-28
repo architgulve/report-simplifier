@@ -6,7 +6,7 @@ const MediRemindersLayout = () => {
   return (
     <Stack>
       <Stack.Screen name='remind' options={{ headerShown: false }} />
-      <Stack.Screen name='addmedications' options={{ headerShown: false }} />
+      <Stack.Screen name='addmedications' options={{ headerShown: false, presentation: 'modal' }} />
     </Stack>
   )
 }

@@ -12,6 +12,8 @@ import { useRef } from "react";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import * as ImageManipulator from "expo-image-manipulator";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import LottieView from "lottie-react-native";
 
 const Scanner = () => {
   const [permission, requestPermission] = useCameraPermissions();
@@ -20,6 +22,9 @@ const Scanner = () => {
   const [mediaPermission, requestMediaPermission] =
     MediaLibrary.usePermissions();
   const windowWidth = Dimensions.get("window").width;
+  const initialDietRef = useRef("");
+  const [loading, setLoading] = useState(false);
+  const [diet, setDiet] = useState(""); 
 
   const resizeImage = async (uri) => {
     const result = await ImageManipulator.manipulateAsync(
@@ -31,6 +36,7 @@ const Scanner = () => {
   };
 
   const uploadImageToBackend = async (uri) => {
+    setLoading(true);
     const resizedUri = await resizeImage(uri);
 
     const formData = new FormData();
@@ -41,12 +47,38 @@ const Scanner = () => {
     });
 
     try {
-      const res = await axios.post("http://192.168.69.47:8000/ocr/", formData, {
+      const res = await axios.post("http://<IP address>:8000/ocr/", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
       });
-      console.log("OCR Result:", res.data.text);
+      const responseText = res.data.text;
+      console.log("Full LLM Response:", responseText);
+
+      const startIndex = responseText.indexOf("[");
+      const endIndex = responseText.indexOf("]") + 1;
+
+      const jsonPart = responseText.slice(startIndex, endIndex);
+      const dietPart = responseText.slice(endIndex).trim();
+
+      let medicineData = [];
+      try {
+        medicineData = JSON.parse(jsonPart);
+      } catch (e) {
+        console.error("Failed to parse medicine JSON:", e, jsonPart);
+      }
+
+      const dietText = dietPart.startsWith("Diet Recommendation:")
+        ? dietPart
+        : "Diet Recommendation:\n" + dietPart;
+
+      await AsyncStorage.setItem("dietRecommendation", dietText);
+      await AsyncStorage.setItem("medicineData", JSON.stringify(medicineData));
+      setDiet(dietText);
+
+      console.log("Medicine Data:", medicineData);
+      console.log("Diet Recommendation:", dietText);
+      router.push("/confirmation");
     } catch (err) {
       console.error("Upload error:", err);
     }
@@ -55,8 +87,11 @@ const Scanner = () => {
   const takePicture = async () => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
+      console.log("1");
       await MediaLibrary.createAssetAsync(photo.uri);
+      console.log("2");
       uploadImageToBackend(photo.uri);
+      console.log("3");
     }
   };
 
@@ -79,7 +114,19 @@ const Scanner = () => {
     }
     if (!permission?.granted) requestPermission();
     if (!mediaPermission?.granted) requestMediaPermission();
+    const getInitialDiet = async () => {
+      const stored = await AsyncStorage.getItem("dietRecommendation");
+      initialDietRef.current = stored || "";
+    };
+    getInitialDiet();
   }, []);
+
+  useEffect(() => {
+    if (diet.trim() && diet !== initialDietRef.current) {
+      setLoading(false);
+      router.push("/confirmation");
+    }
+  }, [diet]);
 
   if (!permission) {
     return <Text>Checking camera permissions...</Text>;
@@ -164,7 +211,6 @@ const Scanner = () => {
             <CameraView
               ref={cameraRef}
               style={{
-                // position: "absolute",
                 width: "100%",
                 height: "100%",
                 zIndex: 1,
@@ -174,27 +220,15 @@ const Scanner = () => {
               facing="back"
               onCameraReady={() => setIsCameraReady(true)}
             >
-              {/* <View
-              style={{
-                // position: "absolute",
-                width: "100%",
-                height: "100%",
-                zIndex: 1,
-                alignContent: "flex-end",
-                justifyContent: "flex-start",
-              }}
-            > */}
               <View
                 style={{
                   backgroundColor: "#DFF6FB",
                   height: "30%",
                   widhth: "30%",
-                  // alignSelf: "flex-end",
                   transformOrigin: "top",
                   transform: [{ translateX: "90%" }, { rotate: "45deg" }],
                 }}
               ></View>
-              {/* </View> */}
             </CameraView>
           </View>
 
@@ -266,7 +300,7 @@ const Scanner = () => {
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={openGallery}>
+            <TouchableOpacity onPress={() => {router.push("/upload")}}>
               <View
                 style={{
                   width: 0.2 * windowWidth,
@@ -297,6 +331,38 @@ const Scanner = () => {
           </View>
         </View>
       </View>
+      {loading && (
+        <View
+          style={{
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            backgroundColor: "#DFF6FB",
+            paddingTop: 50,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "bold",
+              marginBottom: 20,
+              position: "absolute",
+              top: 100,
+            }}
+          >
+            Let's see what we can do for you...
+          </Text>
+          <LottieView
+            source={require("../../assets/animations/AIHeart.json")}
+            autoPlay
+            loop
+            style={{
+              height: "100%",
+              width: "100%",
+            }}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 };

@@ -15,6 +15,60 @@ export const getDatabaseStatus = async () => {
   }
 };
 
+const createNotiTable = () => {
+  try {
+    db.execAsync(`
+      CREATE TABLE IF NOT EXISTS Notification (
+        NotificationID INTEGER PRIMARY KEY AUTOINCREMENT,
+        NotificationName TEXT NOT NULL,
+        NotificationTime TEXT NOT NULL
+      );
+    `);
+    console.log('✅ Notification table created successfully');
+  } catch (error) {
+    console.error('❌ Error creating Notification table:', error);
+  }
+}
+
+const addNoti = async (name, time) => {
+  try {
+    const result = await db.runAsync(
+      `INSERT INTO Notification (NotificationName, NotificationTime)
+       VALUES (?, ?)`,
+      [name, time]
+    );
+    console.log('💾 Insert result:', result);
+    console.log('🆔 New notification ID:', result.lastInsertRowId);
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error adding notification:', error);
+    return false;
+  }
+}
+
+const getAllNotifications = async () => {
+  try {
+    const notifications = await db.getAllAsync('SELECT * FROM Notification ORDER BY NotificationID DESC');
+    console.log('📋 Retrieved notifications:', notifications);
+    return notifications;
+  } catch (error) {
+    console.error('❌ Error fetching notifications:', error);
+    return [];
+  }
+};
+
+const deleteNoti = async (id) => {
+  try {
+    const result = await db.runAsync('DELETE FROM Notification WHERE NotificationID = ?', [id]);
+    console.log('💾 Delete result:', result);
+    return result.changes > 0;
+  } catch (error) {
+    console.error('❌ Error deleting notification:', error);
+    return false;
+  }
+}
+
+export { createNotiTable, addNoti, getAllNotifications, deleteNoti };
 
 // ✅ Create Medicine table
 const createMedicineTable = () => {
@@ -167,6 +221,7 @@ export const insertSetting = async (name, age, language, bloodgroup, emergencyCo
       `INSERT OR REPLACE INTO settings (name, age, language, bloodgroup, emergencyContact, primaryDoctor) VALUES (?, ?, ?, ?, ?, ?);`,
       [name, age, language, bloodgroup, emergencyContact, primaryDoctor]
     );
+    console.log('💾 Insert result:', result);
     return true;
   } catch (error) {
     console.error('❌ Error inserting setting:', error);
@@ -248,6 +303,7 @@ export const initializeDatabase = () => {
   createMedicineTable();
   initDatabase();
   dietpage();
+  createNotiTable();
   console.log('✅ All tables initialized');
 };
 
